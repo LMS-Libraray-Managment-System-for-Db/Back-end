@@ -3,4 +3,4 @@ config.env
 src/config/config.ts
 dist/config/
 APIDOCS.md
-src/database/connectDb.ts
+# src/database/connectDb.ts
