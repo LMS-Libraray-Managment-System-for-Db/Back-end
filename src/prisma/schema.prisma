@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model books {
+  book_id          Int            @id @default(autoincrement())
+  title            String         @db.VarChar(255)
+  author           String         @db.VarChar(100)
+  isbn             String?        @db.VarChar(20)
+  type             books_type
+  total_copies     Int
+  available_copies Int
+  library_name     String?        @db.VarChar(100)
+  books_genres     books_genres[]
+  reservations     reservations[]
+  transactions     transactions[]
+}
+
+model books_genres {
+  book_id  Int
+  genre_id Int
+  books    books  @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction, map: "books_genres_ibfk_1")
+  genres   genres @relation(fields: [genre_id], references: [genre_id], onDelete: NoAction, onUpdate: NoAction, map: "books_genres_ibfk_2")
+
+  @@id([book_id, genre_id])
+  @@index([genre_id], map: "genre_id")
+}
+
+model genres {
+  genre_id     Int            @id @default(autoincrement())
+  name         String         @db.VarChar(50)
+  books_genres books_genres[]
+}
+
+model reservations {
+  reservation_id   Int                 @id @default(autoincrement())
+  user_id          Int?
+  book_id          Int?
+  reservation_date DateTime?           @default(now()) @db.Timestamp(0)
+  expiry_date      DateTime?           @db.Timestamp(0)
+  status           reservations_status @default(Pending)
+  users            users?              @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "reservations_ibfk_1")
+  books            books?              @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction, map: "reservations_ibfk_2")
+
+  @@index([book_id], map: "book_id")
+  @@index([user_id], map: "user_id")
+}
+
+model transactions {
+  transaction_id   Int                           @id @default(autoincrement())
+  user_id          Int?
+  book_id          Int?
+  transaction_type transactions_transaction_type
+  transaction_date DateTime?                     @default(now()) @db.Timestamp(0)
+  users            users?                        @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_ibfk_1")
+  books            books?                        @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_ibfk_2")
+
+  @@index([book_id], map: "book_id")
+  @@index([user_id], map: "user_id")
+}
+
+model users {
+  user_id                     Int                 @id @default(autoincrement())
+  username                    String              @unique(map: "username") @db.VarChar(50)
+  password                    String              @db.VarChar(255)
+  email                       String?             @unique (map: "email") @db.VarChar(100)
+  role                        users_role
+  account_type                users_account_type?
+  verificationCode            String?             @db.VarChar(50)
+  verificationCode_expiration String?             @db.VarChar(50)
+  verified                    Boolean?
+  avatar                      String?             @db.VarChar(255)
+  reset_token                 String?             @db.VarChar(50)
+  reset_token_expiration      String?             @db.VarChar(50)
+  library_name                String?             @db.VarChar(100)
+  is_active                   Boolean?            @default(true)
+  reservations                reservations[]
+  transactions                transactions[]
+}
+
+enum transactions_transaction_type {
+  Borrow
+  Return
+}
+
+enum books_type {
+  reference
+  fiction
+  non_fiction @map("non-fiction")
+}
+
+enum users_role {
+  patron
+  librarian
+  administrator
+}
+
+enum reservations_status {
+  Pending
+  Confirmed
+  Expired
+}
+
+enum users_account_type {
+  student
+  faculty
+}
