@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserPassword = exports.updateUserResetToken = exports.updateUserVerificationStatus = exports.findUserByResetToken = exports.findUserByVerificationCode = exports.updateUserVerificationCode = exports.findUserById = exports.comparePasswords = exports.findUserByEmail = exports.createUser = void 0;
+exports.findUserByIdentifier = exports.updateUserActive = exports.isUserActive = exports.updateUserById = exports.deleteUserByIdOrEmailOrUsername = exports.getUsersByFilters = exports.updateUserPassword = exports.updateUserResetToken = exports.updateUserVerificationStatus = exports.findUserByResetToken = exports.findUserByVerificationCode = exports.updateUserVerificationCode = exports.findUserById = exports.comparePasswords = exports.findUserByEmail = exports.createUser = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma = new client_1.PrismaClient();
@@ -115,7 +115,6 @@ async function findUserByVerificationCode(user_id, verificationCode) {
     });
 }
 exports.findUserByVerificationCode = findUserByVerificationCode;
-;
 // Function to find user by verification code
 async function findUserByResetToken(user_id, reset_token) {
     return await prisma.users.findFirst({
@@ -126,7 +125,6 @@ async function findUserByResetToken(user_id, reset_token) {
     });
 }
 exports.findUserByResetToken = findUserByResetToken;
-;
 // Function to update user's verification status
 async function updateUserVerificationStatus(userId) {
     await prisma.users.update({
@@ -141,7 +139,6 @@ async function updateUserVerificationStatus(userId) {
     });
 }
 exports.updateUserVerificationStatus = updateUserVerificationStatus;
-;
 async function updateUserResetToken(email, resetToken, expirationTime) {
     await prisma.users.update({
         where: {
@@ -154,7 +151,6 @@ async function updateUserResetToken(email, resetToken, expirationTime) {
     });
 }
 exports.updateUserResetToken = updateUserResetToken;
-;
 // Function to update user's password
 async function updateUserPassword(userId, newPassword) {
     const saltRounds = 10;
@@ -171,5 +167,159 @@ async function updateUserPassword(userId, newPassword) {
     });
 }
 exports.updateUserPassword = updateUserPassword;
-;
+async function getUsersByFilters(filters) {
+    try {
+        const users = await prisma.users.findMany({
+            where: filters,
+        });
+        return users;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error filtering users: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error filtering users: Unknown error occurred`);
+        }
+    }
+}
+exports.getUsersByFilters = getUsersByFilters;
+const deleteUserByIdOrEmailOrUsername = async (identifier) => {
+    try {
+        let user;
+        if (typeof identifier === "number") {
+            user = await prisma.users.findUnique({
+                where: {
+                    user_id: identifier,
+                },
+            });
+        }
+        else {
+            user = await prisma.users.findFirst({
+                where: {
+                    OR: [{ email: identifier }, { username: identifier }],
+                },
+            });
+        }
+        if (!user) {
+            throw new Error("User not found");
+        }
+        await prisma.users.delete({
+            where: {
+                user_id: user.user_id,
+            },
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error filtering users: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error filtering users: Unknown error occurred`);
+        }
+    }
+};
+exports.deleteUserByIdOrEmailOrUsername = deleteUserByIdOrEmailOrUsername;
+const updateUserById = async (userId, updatedUserData) => {
+    try {
+        // Check if user with given ID exists
+        const existingUser = await prisma.users.findUnique({
+            where: { user_id: userId },
+        });
+        if (!existingUser) {
+            return null;
+        }
+        // Update user data
+        const updatedUser = await prisma.users.update({
+            where: { user_id: userId },
+            data: updatedUserData,
+        });
+        return updatedUser;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error editing user: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error editing user: Unknown error occurred`);
+        }
+    }
+};
+exports.updateUserById = updateUserById;
+async function isUserActive(identifier) {
+    try {
+        let user;
+        if (typeof identifier === "number") {
+            user = await prisma.users.findUnique({
+                where: {
+                    user_id: identifier,
+                },
+            });
+        }
+        else {
+            user = await prisma.users.findFirst({
+                where: {
+                    OR: [{ email: identifier }, { username: identifier }],
+                },
+            });
+        }
+        if (user == null) {
+            throw new Error("User not found");
+        }
+        return user.is_active || false;
+    }
+    catch (error) {
+        throw new Error(`Error checking user activity: ${error instanceof Error
+            ? error.message
+            : "Unknown error occurred"}`);
+    }
+}
+exports.isUserActive = isUserActive;
+const updateUserActive = async (userId, isActive) => {
+    try {
+        await prisma.users.update({
+            where: { user_id: userId },
+            data: { is_active: isActive }
+        });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error updating user active: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error updating user active: Unknown error occurred`);
+        }
+    }
+};
+exports.updateUserActive = updateUserActive;
+const findUserByIdentifier = async (identifier) => {
+    try {
+        let user;
+        if (typeof identifier === 'number') {
+            user = await prisma.users.findUnique({
+                where: { user_id: identifier }
+            });
+        }
+        else {
+            user = await prisma.users.findFirst({
+                where: {
+                    OR: [
+                        { email: identifier },
+                        { username: identifier }
+                    ]
+                }
+            });
+        }
+        return user;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error finding user by identifier: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error finding user by identifier: Unknown error occurred`);
+        }
+    }
+};
+exports.findUserByIdentifier = findUserByIdentifier;
 //# sourceMappingURL=userService.js.map

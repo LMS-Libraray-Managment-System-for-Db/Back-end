@@ -32,7 +32,6 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const gravatar_1 = __importDefault(require("gravatar"));
 const express_validator_1 = require("express-validator");
 const config_1 = __importDefault(require("../config/config"));
-const randomString_1 = require("../utils/randomString");
 const nodemailer_1 = __importDefault(require("../utils/nodemailer"));
 const crypto = __importStar(require("crypto"));
 const userService_1 = require("../prisma/userService");
@@ -42,8 +41,10 @@ const registerUser = async (req, res) => {
         return res.status(400).json({ success: false, errors: errors.array() });
     }
     try {
-        const { username, email, password } = req.body;
-        const verificationCode = (0, randomString_1.generateRandomString)();
+        const { username, email, password, account_type } = req.body;
+        const avatar = gravatar_1.default.url(email, { s: "300", r: "pg", d: "mm" });
+        console.log(avatar);
+        const verificationCode = crypto.randomInt(10000, 99999).toString();
         // Check if user already exists with the email
         const existingUser = await (0, userService_1.findUserByEmail)(email);
         if (existingUser) {
@@ -55,13 +56,12 @@ const registerUser = async (req, res) => {
         const salt = await bcryptjs_1.default.genSalt(10);
         const hashPass = await bcryptjs_1.default.hash(password, salt);
         // Get avatar URL
-        const avatar = gravatar_1.default.url(email, { s: "300", r: "pg", d: "mm" });
         // Register user
         const newUser = await (0, userService_1.createUser)({
             username: username.toLowerCase(),
             password: hashPass,
             email: email,
-            account_type: "student",
+            account_type: account_type,
             role: "patron",
             verificationCode: verificationCode,
             verified: false,
@@ -79,6 +79,8 @@ const registerUser = async (req, res) => {
             user: {
                 id: newUser.user_id,
                 username: newUser.username,
+                role: newUser.role,
+                account_type: newUser.account_type,
             },
         };
         const access_expirationTime = Math.floor(Date.now() / 1000) + 1 * 60 * 60; // 1 hour from now
@@ -94,6 +96,8 @@ const registerUser = async (req, res) => {
             msg: "Registration is successful",
             refresh_token: refresh_token,
             token: access_token,
+            role: newUser.role,
+            account_type: newUser.account_type,
         });
     }
     catch (error) {
@@ -141,6 +145,8 @@ const loginUser = async (req, res) => {
             user: {
                 id: user.user_id,
                 username: user.username,
+                role: user.role,
+                account_type: user.account_type,
             },
         };
         const access_expirationTime = Math.floor(Date.now() / 1000) + 1 * 60 * 60; // 1 hour from now
@@ -156,6 +162,8 @@ const loginUser = async (req, res) => {
             msg: "Login successful",
             refresh_token: refresh_token,
             token: access_token,
+            role: user.role,
+            account_type: user.account_type,
         });
     }
     catch (error) {
@@ -264,9 +272,7 @@ const verifyEmail = async (req, res) => {
         const userId = req.cookies["userId"] || req.headers["id"];
         const { verifyCode } = req.body;
         if (!verifyCode) {
-            return res
-                .status(400)
-                .json({
+            return res.status(400).json({
                 success: false,
                 msg: "Verification code not provided",
             });
@@ -350,7 +356,9 @@ const forgotPassword = async (req, res) => {
             return res.status(500).json({ success: false, msg: error.message });
         }
         else {
-            return res.status(500).json({ success: false, msg: "unkown error" });
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
         }
     }
 };
@@ -361,9 +369,10 @@ const updatePassword = async (req, res) => {
         const { password } = req.body;
         console.log(userId, password);
         if (!userId || !password) {
-            return res
-                .status(400)
-                .json({ success: false, msg: "User ID or new password not provided" });
+            return res.status(400).json({
+                success: false,
+                msg: "User ID or new password not provided",
+            });
         }
         // Update user's password
         await (0, userService_1.updateUserPassword)(userId, password);
@@ -377,14 +386,16 @@ const updatePassword = async (req, res) => {
             return res.status(500).json({ success: false, msg: error.message });
         }
         else {
-            return res.status(500).json({ success: false, msg: "unkown error" });
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
         }
     }
 };
 exports.updatePassword = updatePassword;
 // refersh token
 const refreshToken = async (req, res) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const refresh_token = req.body.refreshToken;
     if (!refresh_token) {
         return res.status(400).json({
@@ -398,7 +409,9 @@ const refreshToken = async (req, res) => {
         const decode = jsonwebtoken_1.default.verify(refresh_token, secretKey);
         // Get user details from the token payload
         const userId = (_b = (_a = decode === null || decode === void 0 ? void 0 : decode.payLoad) === null || _a === void 0 ? void 0 : _a.user) === null || _b === void 0 ? void 0 : _b.id;
-        const userName = (_d = (_c = decode === null || decode === void 0 ? void 0 : decode.payLoad) === null || _c === void 0 ? void 0 : _c.user) === null || _d === void 0 ? void 0 : _d.name;
+        const userName = (_d = (_c = decode === null || decode === void 0 ? void 0 : decode.payLoad) === null || _c === void 0 ? void 0 : _c.user) === null || _d === void 0 ? void 0 : _d.username;
+        const role = (_f = (_e = decode === null || decode === void 0 ? void 0 : decode.payLoad) === null || _e === void 0 ? void 0 : _e.user) === null || _f === void 0 ? void 0 : _f.role;
+        const account_type = (_h = (_g = decode === null || decode === void 0 ? void 0 : decode.payLoad) === null || _g === void 0 ? void 0 : _g.user) === null || _h === void 0 ? void 0 : _h.account_type;
         if (!userId || !userName) {
             return res.status(401).json({
                 success: false,
@@ -407,7 +420,17 @@ const refreshToken = async (req, res) => {
         }
         // Generate a new access token
         const access_expirationTime = Math.floor(Date.now() / 1000) + 1 * 60 * 60; // 1 hour from now
-        const new_access_token = jsonwebtoken_1.default.sign({ exp: access_expirationTime, payLoad: { user: { id: userId, name: userName } } }, secretKey);
+        const new_access_token = jsonwebtoken_1.default.sign({
+            exp: access_expirationTime,
+            payLoad: {
+                user: {
+                    id: userId,
+                    username: userName,
+                    role: role,
+                    account_type: account_type,
+                },
+            },
+        }, secretKey);
         // Set the new access token in the response header
         res.header("new_access_token", new_access_token);
         return res.status(200).json({
@@ -423,4 +446,5 @@ const refreshToken = async (req, res) => {
     }
 };
 exports.refreshToken = refreshToken;
+//add user with admin
 //# sourceMappingURL=user.controller.js.map

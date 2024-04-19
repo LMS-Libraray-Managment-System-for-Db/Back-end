@@ -9,6 +9,8 @@ const express_validator_1 = require("express-validator");
 const user_controller_1 = require("../controller/user.controller");
 const verifyEmailVerifier_1 = __importDefault(require("../middleware/verifyEmailVerifier"));
 const resetTokenVerifier_1 = __importDefault(require("../middleware/resetTokenVerifier"));
+const admin_controller_1 = require("../controller/admin.controller");
+const librarian_controller_1 = require("../controller/librarian.controller");
 // let upload = multer();
 const userRouter = express_1.default.Router();
 // userRouter.use(upload.array());
@@ -51,9 +53,13 @@ userRouter.put("/reset-password", [
         .escape()
         .withMessage("code is deficient")
 ], jwtTokenVerifier_1.default, resetTokenVerifier_1.default, user_controller_1.updatePassword);
-// userRouter.post(
-//     "/refresh-token",
-//     refreshToken,
-// );
+userRouter.post("/refresh-token", jwtTokenVerifier_1.default, user_controller_1.refreshToken);
+userRouter.post("/refresh-token", jwtTokenVerifier_1.default, user_controller_1.refreshToken);
+userRouter.post("/admin/addUser", jwtTokenVerifier_1.default, admin_controller_1.addUser);
+userRouter.post("/admin/filter", jwtTokenVerifier_1.default, admin_controller_1.filterUsers);
+userRouter.delete("/admin/delete", jwtTokenVerifier_1.default, admin_controller_1.deleteUserByEmailOrUsername);
+userRouter.put("/admin/edit", jwtTokenVerifier_1.default, admin_controller_1.editUserByAdmin);
+userRouter.post("/admin/isActive", jwtTokenVerifier_1.default, admin_controller_1.checkUserIsActiveByAdmin);
+userRouter.post("/librarian/toggle-user-active", jwtTokenVerifier_1.default, librarian_controller_1.toggleUserActiveByLibrarian);
 exports.default = userRouter;
 //# sourceMappingURL=userRouter.js.map

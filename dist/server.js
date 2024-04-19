@@ -15,6 +15,7 @@ const hpp_1 = __importDefault(require("hpp"));
 const http_1 = __importDefault(require("http"));
 const helmet_1 = __importDefault(require("helmet"));
 const reqLimiter_1 = require("./middleware/reqLimiter");
+const bookRouter_1 = __importDefault(require("./router/bookRouter"));
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 dotenv_1.default.config({ path: "./../config.env" });
@@ -38,8 +39,7 @@ app.use(body_parser_1.default.urlencoded({ extended: true }));
 //It prevents multiple values for the same parameter,
 app.use((0, hpp_1.default)());
 app.use("/api/v1/user", reqLimiter_1.defaultLimiter, userRouter_1.default);
-// app.use("/api/v1/module", defaultLimiter, moduleRouter);
-// app.use("/api/v1/project", defaultLimiter, projectRouter);
+app.use("/api/v1/book", reqLimiter_1.defaultLimiter, bookRouter_1.default);
 //-------------------------------------------------------
 if (hostName && port) {
     server.listen(port, hostName, () => {
