@@ -23,7 +23,7 @@ const jwtTokenVerifier = (req: express.Request, res: express.Response, next: exp
             });
         }
 
-        req.headers["user"] = decode["payLoad"]["user"].name;
+        req.headers["user"] = decode["payLoad"]["user"].username;
         req.headers["id"] = decode["payLoad"]["user"].id;
         // console.log(req.headers)
         next();

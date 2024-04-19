@@ -3,18 +3,21 @@ import jwtTokenVerifier from "../middleware/jwtTokenVerifier";
 import { body, validationResult } from "express-validator";
 import {
     
+  
     forgotPassword,
     getUserProfile,
     loginUser,
+    refreshToken,
     registerUser,
     sendVerificationEmail,
     updatePassword,
     verifyEmail
     
 } from "../controller/user.controller";
-import tokenVerifier from "../middleware/resetTokenVerifier";
 import verifyEmailVerifier from "../middleware/verifyEmailVerifier";
 import resetTokenVerifier from "../middleware/resetTokenVerifier";
+import { addUser, checkUserIsActiveByAdmin, deleteUserByEmailOrUsername, editUserByAdmin, filterUsers } from "../controller/admin.controller";
+import { toggleUserActiveByLibrarian } from "../controller/librarian.controller";
 
 // let upload = multer();
 const userRouter: express.Router = express.Router();
@@ -98,9 +101,45 @@ userRouter.put(
     resetTokenVerifier,
     updatePassword,
 );
-// userRouter.post(
-//     "/refresh-token",
-//     refreshToken,
-// );
+userRouter.post(
+    "/refresh-token",
+    jwtTokenVerifier,
+    refreshToken,
+);
+userRouter.post(
+    "/refresh-token",
+    jwtTokenVerifier,
+    refreshToken,
+);
+userRouter.post(
+    "/admin/addUser",
+    jwtTokenVerifier,
+    addUser,
+);
+userRouter.post(
+    "/admin/filter",
+    jwtTokenVerifier,
+    filterUsers,
+);
+userRouter.delete(
+    "/admin/delete",
+    jwtTokenVerifier,
+    deleteUserByEmailOrUsername,
+);
+userRouter.put(
+    "/admin/edit",
+    jwtTokenVerifier,
+    editUserByAdmin,
+);
+userRouter.post(
+    "/admin/isActive",
+    jwtTokenVerifier,
+    checkUserIsActiveByAdmin,
+);
+userRouter.post(
+    "/librarian/toggle-user-active",
+    jwtTokenVerifier,
+    toggleUserActiveByLibrarian,
+);
 
 export default userRouter;

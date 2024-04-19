@@ -12,7 +12,7 @@ model books {
   title            String         @db.VarChar(255)
   author           String         @db.VarChar(100)
   isbn             String?        @db.VarChar(20)
-  type             books_type
+  type             String
   total_copies     Int
   available_copies Int
   library_name     String?        @db.VarChar(100)
@@ -68,7 +68,7 @@ model users {
   user_id                     Int                 @id @default(autoincrement())
   username                    String              @unique(map: "username") @db.VarChar(50)
   password                    String              @db.VarChar(255)
-  email                       String?             @unique (map: "email") @db.VarChar(100)
+  email                       String?             @unique(map: "email") @db.VarChar(100)
   role                        users_role
   account_type                users_account_type?
   verificationCode            String?             @db.VarChar(50)
@@ -81,17 +81,21 @@ model users {
   is_active                   Boolean?            @default(true)
   reservations                reservations[]
   transactions                transactions[]
+  user_libraries              user_libraries[]
+}
+
+model user_libraries {
+  user_id      Int
+  library_name String   @db.VarChar(100)
+  is_active    Boolean? @default(true)
+  users        users    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "user_libraries_ibfk_1")
+
+  @@id([user_id, library_name])
 }
 
 enum transactions_transaction_type {
   Borrow
   Return
-}
-
-enum books_type {
-  reference
-  fiction
-  non_fiction @map("non-fiction")
 }
 
 enum users_role {
@@ -109,4 +113,6 @@ enum reservations_status {
 enum users_account_type {
   student
   faculty
+  librarian
+  administrator
 }

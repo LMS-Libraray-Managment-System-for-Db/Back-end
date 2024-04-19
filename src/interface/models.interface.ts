@@ -1,12 +1,13 @@
 // userModel.ts
 
+
 export interface User {
     id?: number;
     username: string;
     email: string;
     password: string;
     role: "patron" | "librarian" | "administrator";
-    account_type?: "student" | "faculty"; // Optional
+    account_type?: "student" | "faculty" | "librarian" | "administrator"; // Optional
     verificationCode?: string | null; // Optional
     verificationCode_expiration?: string | null; // Optional
     verified?: boolean; // Optional
@@ -17,13 +18,26 @@ export interface User {
     is_active: boolean;
 }
 // bookModel.ts
+export enum BookType {
+    Reference = 'reference',
+    Fiction = 'fiction',
+    NonFiction = 'non-fiction'
+}
 
+export interface BookFilters {
+    title?: string;
+    author?: string;
+    isbn?: string;
+    type?: BookType; // 'reference', 'fiction', 'non-fiction'
+    library_name?: string;
+    book_id?: number;
+}
 export interface Book {
     book_id: number;
     title: string;
     author: string;
     isbn?: string | null; // Optional
-    type: "reference" | "fiction" | "non-fiction";
+    type: BookType;
     total_copies: number;
     available_copies: number;
     library_name?: string | null; // Optional
@@ -53,3 +67,37 @@ export interface Reservation {
     expiry_date?: string | null; // Optional
     status: "Pending" | "Confirmed" | "Expired";
 }
+
+
+
+// Define enum for user role
+export enum UserRole {
+    Patron = 'patron',
+    Librarian = 'librarian',
+    Administrator = 'administrator'
+}
+
+// Define enum for account type
+export enum AccountType {
+    Student = 'student',
+    Faculty = 'faculty',
+    Librarian = 'librarian',
+    Administrator = 'administrator'
+}
+
+export interface UserFilters {
+    role?: UserRole; // 'patron', 'librarian', 'administrator'
+    account_type?: AccountType; // 'student', 'faculty','librarian', 'administrator'
+    verified?: boolean;
+    isActive?: boolean;
+    library_name?: string;
+    email?: string;
+    username?: string;
+    user_id?: number;
+}
+
+export interface UserLibrary {
+    userId: number;
+    libraryName: string;
+    isActive: boolean;
+  }

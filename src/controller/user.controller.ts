@@ -11,14 +11,19 @@ import * as crypto from "crypto";
 import {
     comparePasswords,
     createUser,
+    deleteUserByIdOrEmailOrUsername,
     findUserByEmail,
     findUserById,
     findUserByVerificationCode,
+    getUsersByFilters,
+    isUserActive,
+    updateUserById,
     updateUserPassword,
     updateUserResetToken,
     updateUserVerificationCode,
     updateUserVerificationStatus,
 } from "../prisma/userService";
+
 
 export const registerUser = async (
     req: express.Request,
@@ -29,9 +34,11 @@ export const registerUser = async (
         return res.status(400).json({ success: false, errors: errors.array() });
     }
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, account_type } = req.body;
+        const avatar = gravatar.url(email, { s: "300", r: "pg", d: "mm" });
+        console.log(avatar);
 
-        const verificationCode = generateRandomString();
+        const verificationCode = crypto.randomInt(10000, 99999).toString();
         // Check if user already exists with the email
         const existingUser = await findUserByEmail(email);
         if (existingUser) {
@@ -45,14 +52,13 @@ export const registerUser = async (
         const hashPass = await bcrypt.hash(password, salt);
 
         // Get avatar URL
-        const avatar = gravatar.url(email, { s: "300", r: "pg", d: "mm" });
 
         // Register user
         const newUser = await createUser({
             username: username.toLowerCase(),
             password: hashPass,
             email: email,
-            account_type: "student",
+            account_type: account_type,
             role: "patron",
             verificationCode: verificationCode,
             verified: false,
@@ -73,6 +79,8 @@ export const registerUser = async (
             user: {
                 id: newUser.user_id,
                 username: newUser.username,
+                role: newUser.role,
+                account_type: newUser.account_type,
             },
         };
         const access_expirationTime =
@@ -98,6 +106,8 @@ export const registerUser = async (
             msg: "Registration is successful",
             refresh_token: refresh_token,
             token: access_token,
+            role: newUser.role,
+            account_type: newUser.account_type,
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -153,6 +163,8 @@ export const loginUser = async (
             user: {
                 id: user.user_id,
                 username: user.username,
+                role: user.role,
+                account_type: user.account_type,
             },
         };
         const access_expirationTime =
@@ -178,6 +190,8 @@ export const loginUser = async (
             msg: "Login successful",
             refresh_token: refresh_token,
             token: access_token,
+            role: user.role,
+            account_type: user.account_type,
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -292,16 +306,14 @@ export const verifyEmail = async (
 ) => {
     try {
         const username = req.cookies["userName"] || req.headers["user"];
-    const userId = req.cookies["userId"] || req.headers["id"];
-        const { verifyCode} = req.body;
+        const userId = req.cookies["userId"] || req.headers["id"];
+        const { verifyCode } = req.body;
 
         if (!verifyCode) {
-            return res
-                .status(400)
-                .json({
-                    success: false,
-                    msg: "Verification code not provided",
-                });
+            return res.status(400).json({
+                success: false,
+                msg: "Verification code not provided",
+            });
         }
 
         // Find user by verification code
@@ -350,7 +362,11 @@ export const forgotPassword = async (
         if (user) {
             const tokenExpirationTime = Date.now() + 300000; // 3 minutes from now
             const resetToken = crypto.randomInt(10000, 99999).toString();
-            updateUserResetToken(email,resetToken,tokenExpirationTime.toString());
+            updateUserResetToken(
+                email,
+                resetToken,
+                tokenExpirationTime.toString(),
+            );
             sendMail({
                 from: process.env.EMAIL_USER || config.emailUser,
                 to: email,
@@ -382,15 +398,14 @@ export const forgotPassword = async (
         }
     } catch (error) {
         if (error instanceof Error) {
-            
             return res.status(500).json({ success: false, msg: error.message });
         } else {
-            return res.status(500).json({ success: false, msg: "unkown error" });
-            
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
         }
     }
 };
-
 
 export const updatePassword = async (
     req: express.Request,
@@ -399,11 +414,12 @@ export const updatePassword = async (
     try {
         const userId = req.cookies["userId"] || req.headers["id"];
         const { password } = req.body;
-        console.log(userId,password);
+        console.log(userId, password);
         if (!userId || !password) {
-            return res
-                .status(400)
-                .json({ success: false, msg: "User ID or new password not provided" });
+            return res.status(400).json({
+                success: false,
+                msg: "User ID or new password not provided",
+            });
         }
 
         // Update user's password
@@ -415,15 +431,14 @@ export const updatePassword = async (
         });
     } catch (error) {
         if (error instanceof Error) {
-            
             return res.status(500).json({ success: false, msg: error.message });
         } else {
-            return res.status(500).json({ success: false, msg: "unkown error" });
-            
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
         }
-    } 
+    }
 };
-
 
 // refersh token
 export const refreshToken = async (
@@ -439,7 +454,8 @@ export const refreshToken = async (
         });
     }
 
-    const secretKey: string | any = process.env.JWT_SECRET_KEY || config.secret_jwt;
+    const secretKey: string | any =
+        process.env.JWT_SECRET_KEY || config.secret_jwt;
 
     try {
         // Verify the refresh token
@@ -447,7 +463,9 @@ export const refreshToken = async (
 
         // Get user details from the token payload
         const userId = decode?.payLoad?.user?.id;
-        const userName = decode?.payLoad?.user?.name;
+        const userName = decode?.payLoad?.user?.username;
+        const role = decode?.payLoad?.user?.role;
+        const account_type = decode?.payLoad?.user?.account_type;
 
         if (!userId || !userName) {
             return res.status(401).json({
@@ -457,9 +475,20 @@ export const refreshToken = async (
         }
 
         // Generate a new access token
-        const access_expirationTime = Math.floor(Date.now() / 1000) + 1 * 60 * 60; // 1 hour from now
+        const access_expirationTime =
+            Math.floor(Date.now() / 1000) + 1 * 60 * 60; // 1 hour from now
         const new_access_token = jwt.sign(
-            { exp: access_expirationTime, payLoad: { user: { id: userId, name: userName } } },
+            {
+                exp: access_expirationTime,
+                payLoad: {
+                    user: {
+                        id: userId,
+                        username: userName,
+                        role: role,
+                        account_type: account_type,
+                    },
+                },
+            },
             secretKey,
         );
 
@@ -475,5 +504,8 @@ export const refreshToken = async (
             success: false,
             msg: "Invalid refresh token",
         });
-    } 
+    }
 };
+
+//add user with admin
+

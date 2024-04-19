@@ -10,6 +10,7 @@ import hpp from "hpp";
 import http from "http";
 import helmet from "helmet";
 import { defaultLimiter } from "./middleware/reqLimiter";
+import bookRouter from "./router/bookRouter";
 
 
 const app: express.Application = express();
@@ -46,8 +47,7 @@ app.use(hpp());
 
 
 app.use("/api/v1/user", defaultLimiter, userRouter);
-// app.use("/api/v1/module", defaultLimiter, moduleRouter);
-// app.use("/api/v1/project", defaultLimiter, projectRouter);
+app.use("/api/v1/book", defaultLimiter, bookRouter);
 
 
 //-------------------------------------------------------
