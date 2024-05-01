@@ -17,6 +17,16 @@ export interface User {
     library_name?: string | null; // Optional
     is_active: boolean;
 }
+export interface UserFilters {
+    role?: UserRole; // 'patron', 'librarian', 'administrator'
+    account_type?: AccountType; // 'student', 'faculty','librarian', 'administrator'
+    verified?: boolean;
+    isActive?: boolean;
+    library_name?: string;
+    email?: string;
+    username?: string;
+    user_id?: number;
+}
 // bookModel.ts
 export enum BookType {
     Reference = 'reference',
@@ -24,16 +34,8 @@ export enum BookType {
     NonFiction = 'non-fiction'
 }
 
-export interface BookFilters {
-    title?: string;
-    author?: string;
-    isbn?: string;
-    type?: BookType; // 'reference', 'fiction', 'non-fiction'
-    library_name?: string;
-    book_id?: number;
-}
 export interface Book {
-    book_id: number;
+    book_id?: number;
     title: string;
     author: string;
     isbn?: string | null; // Optional
@@ -41,6 +43,16 @@ export interface Book {
     total_copies: number;
     available_copies: number;
     library_name?: string | null; // Optional
+}
+export interface BookFilters {
+    [key: string]: any;
+    title?: string;
+    author?: string;
+    isbn?: string;
+    type?: BookType; // 'reference', 'fiction', 'non-fiction'
+    library_name?: string;
+    book_id?: number;
+    genreName?: string;
 }
 // genreModel.ts
 
@@ -54,7 +66,7 @@ export interface Transaction {
     transaction_id: number;
     user_id: number;
     book_id: number;
-    transaction_type: "Borrow" | "Return";
+    transaction_type: "Borrow_request" | "Returned"|"Borrowed";
     transaction_date: Date; // Assuming it's a string for simplicity, can be a Date object if needed
 }
 // reservationModel.ts
@@ -76,6 +88,11 @@ export enum UserRole {
     Librarian = 'librarian',
     Administrator = 'administrator'
 }
+export enum transactionTypes {
+    BorrowRequest = 'Borrow_request',
+    Return = 'Returned',
+    Borrowed = 'Borrowed'
+}
 
 // Define enum for account type
 export enum AccountType {
@@ -85,16 +102,7 @@ export enum AccountType {
     Administrator = 'administrator'
 }
 
-export interface UserFilters {
-    role?: UserRole; // 'patron', 'librarian', 'administrator'
-    account_type?: AccountType; // 'student', 'faculty','librarian', 'administrator'
-    verified?: boolean;
-    isActive?: boolean;
-    library_name?: string;
-    email?: string;
-    username?: string;
-    user_id?: number;
-}
+
 
 export interface UserLibrary {
     userId: number;

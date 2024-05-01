@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { User, UserFilters } from "../interface/models.interface";
+import { User, UserFilters } from "../../interface/models.interface";
 import bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 const prisma = new PrismaClient();
@@ -119,17 +119,17 @@ export async function findUserByVerificationCode(
     });
 }
 // Function to find user by verification code
-export async function findUserByResetToken(
-    user_id: number,
-    reset_token: string,
-) {
-    return await prisma.users.findFirst({
-        where: {
-            reset_token: reset_token,
-            user_id: user_id,
-        },
-    });
-}
+// export async function findUserByResetToken(
+//     user_id: number,
+//     reset_token: string,
+// ) {
+//     return await prisma.users.findFirst({
+//         where: {
+//             reset_token: reset_token,
+//             user_id: user_id,
+//         },
+//     });
+// }
 
 // Function to update user's verification status
 export async function updateUserVerificationStatus(userId: number) {
@@ -177,6 +177,25 @@ export async function updateUserPassword(userId: number, newPassword: string) {
     });
 }
 
+// get first 30 users each request
+export async function getAllUsers(options?: any) {
+    try {
+        const { page = 1 } = options || {};
+        const take = 30;
+        const skip = (page - 1) * take;
+        const users = await prisma.users.findMany({
+            skip,
+            take,
+        });
+        return users;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error fetching all users: ${error.message}`);
+        } else {
+            throw new Error(`Error fetching all users: Unknown error occurred`);
+        }
+    }
+}
 export async function getUsersByFilters(filters: UserFilters) {
     try {
         const users = await prisma.users.findMany({
@@ -295,7 +314,7 @@ export const updateUserActive = async (userId: number, isActive: boolean) => {
     try {
         await prisma.users.update({
             where: { user_id: userId },
-            data: { is_active: isActive }
+            data: { is_active: isActive },
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -311,24 +330,23 @@ export const updateUserActive = async (userId: number, isActive: boolean) => {
 export const findUserByIdentifier = async (identifier: string | number) => {
     try {
         let user;
-        if (typeof identifier === 'number') {
+        if (typeof identifier === "number") {
             user = await prisma.users.findUnique({
-                where: { user_id: identifier }
+                where: { user_id: identifier },
             });
         } else {
             user = await prisma.users.findFirst({
                 where: {
-                    OR: [
-                        { email: identifier },
-                        { username: identifier }
-                    ]
-                }
+                    OR: [{ email: identifier }, { username: identifier }],
+                },
             });
         }
         return user;
     } catch (error) {
         if (error instanceof Error) {
-            throw new Error(`Error finding user by identifier: ${error.message}`);
+            throw new Error(
+                `Error finding user by identifier: ${error.message}`,
+            );
         } else {
             throw new Error(
                 `Error finding user by identifier: Unknown error occurred`,
@@ -336,3 +354,51 @@ export const findUserByIdentifier = async (identifier: string | number) => {
         }
     }
 };
+
+export async function getAllLibrariesWithLibrarians() {
+    try {
+        const libraries = await prisma.users.findMany({
+            where: {
+                role: "librarian",
+                library_name: {
+                    not: null,
+                },
+            },
+            select: {
+                library_name: true,
+            },
+            distinct: ["library_name"],
+        });
+        return libraries.map((user) => user.library_name);
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(
+                `Error fetching libraries with librarians: ${error.message}`,
+            );
+        } else {
+            throw new Error(
+                `Error fetching libraries with librarians: Unknown error occurred`,
+            );
+        }
+    }
+}
+export async function getUsersByLibrary(libraryName: string) {
+    try {
+        const users = await prisma.users.findMany({
+            where: {
+                library_name: libraryName,
+            },
+        });
+        return users;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(
+                `Error fetching users with library name ${libraryName}: ${error.message}`,
+            );
+        } else {
+            throw new Error(
+                `Error fetching users with library name ${libraryName}: Unknown error occurred`,
+            );
+        }
+    }
+}

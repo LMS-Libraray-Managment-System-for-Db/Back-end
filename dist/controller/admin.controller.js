@@ -26,11 +26,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkUserIsActiveByAdmin = exports.editUserByAdmin = exports.deleteUserByEmailOrUsername = exports.filterUsers = exports.addUser = void 0;
+exports.getUsersWithLibraryName = exports.checkUserIsActiveByAdmin = exports.editUserByAdmin = exports.deleteUserByEmailOrUsername = exports.getAllUsersByAdmin = exports.filterUsers = exports.addUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const gravatar_1 = __importDefault(require("gravatar"));
 const crypto = __importStar(require("crypto"));
-const userService_1 = require("../prisma/userService");
+const userService_1 = require("../prisma/services/userService");
 const addUser = async (req, res) => {
     try {
         const userData = req.body;
@@ -57,6 +57,7 @@ const addUser = async (req, res) => {
             username: userData.username.toLowerCase(),
             password: hashPass,
             email: userData.email,
+            library_name: userData.library_name,
             account_type: userData.account_type,
             role: userData.role,
             verificationCode: verificationCode,
@@ -150,6 +151,42 @@ const filterUsers = async (req, res) => {
     }
 };
 exports.filterUsers = filterUsers;
+// get all users
+const getAllUsersByAdmin = async (req, res) => {
+    try {
+        const { page } = req.query;
+        const adminId = req.cookies["userId"] || req.headers["id"];
+        const user = await (0, userService_1.findUserById)(parseInt(adminId));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "administrator") {
+            return res
+                .status(401)
+                .json({ success: false, msg: "You have no permission 🤬😡" });
+        }
+        const users = await (0, userService_1.getAllUsers)(page);
+        if (users) {
+            res.status(200).json({ success: true, data: users });
+        }
+        else {
+            res.status(401).json({ success: false, msg: "No user found" });
+        }
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        }
+        else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
+        }
+    }
+};
+exports.getAllUsersByAdmin = getAllUsersByAdmin;
 const deleteUserByEmailOrUsername = async (req, res) => {
     const { identifier } = req.body;
     const adminId = req.cookies["userId"] || req.headers["id"];
@@ -158,9 +195,7 @@ const deleteUserByEmailOrUsername = async (req, res) => {
         return res.status(401).json({ success: false, msg: "who are you?🤔" });
     }
     if (user.role !== "administrator") {
-        return res
-            .status(401)
-            .json({
+        return res.status(401).json({
             success: false,
             msg: "You have no permission 🤬😡",
         });
@@ -195,12 +230,18 @@ const editUserByAdmin = async (req, res) => {
         // Find admin user by ID
         const adminUser = await (0, userService_1.findUserById)(parseInt(adminId));
         if (!adminUser || adminUser.role !== "administrator") {
-            return res.status(401).json({ success: false, msg: "You don't have permission to perform this action." });
+            return res.status(401).json({
+                success: false,
+                msg: "You don't have permission to perform this action.",
+            });
         }
         // Update user data
         const updatedUser = await (0, userService_1.updateUserById)(userId, updatedUserData);
         if (!updatedUser) {
-            return res.status(404).json({ success: false, msg: "User not found or error updating user data." });
+            return res.status(404).json({
+                success: false,
+                msg: "User not found or error updating user data.",
+            });
         }
         return res.status(200).json({
             success: true,
@@ -218,7 +259,12 @@ const editUserByAdmin = async (req, res) => {
         });
     }
     catch (error) {
-        return res.status(500).json({ success: false, msg: error instanceof Error ? error.message : "Unknown error occurred." });
+        return res.status(500).json({
+            success: false,
+            msg: error instanceof Error
+                ? error.message
+                : "Unknown error occurred.",
+        });
     }
 };
 exports.editUserByAdmin = editUserByAdmin;
@@ -230,9 +276,7 @@ const checkUserIsActiveByAdmin = async (req, res) => {
         return res.status(401).json({ success: false, msg: "who are you?🤔" });
     }
     if (user.role !== "administrator") {
-        return res
-            .status(401)
-            .json({
+        return res.status(401).json({
             success: false,
             msg: "You have no permission 🤬😡",
         });
@@ -244,9 +288,7 @@ const checkUserIsActiveByAdmin = async (req, res) => {
     }
     try {
         const isActive = await (0, userService_1.isUserActive)(identifier);
-        return res
-            .status(200)
-            .json({ success: true, msg: isActive });
+        return res.status(200).json({ success: true, msg: isActive });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -260,4 +302,43 @@ const checkUserIsActiveByAdmin = async (req, res) => {
     }
 };
 exports.checkUserIsActiveByAdmin = checkUserIsActiveByAdmin;
+// get librarian user by library name
+const getUsersWithLibraryName = async (req, res) => {
+    try {
+        const { libraryName } = req.body;
+        const adminId = req.cookies["userId"] || req.headers["id"];
+        const user = await (0, userService_1.findUserById)(parseInt(adminId));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "administrator") {
+            return res.status(401).json({
+                success: false,
+                msg: "You have no permission 🤬😡",
+            });
+        }
+        // Validate if libraryName is provided
+        if (!libraryName) {
+            return res
+                .status(400)
+                .json({ success: false, msg: "Library name is required" });
+        }
+        // Fetch users with the provided library name
+        const users = await (0, userService_1.getUsersByLibrary)(libraryName);
+        return res.status(200).json({ success: true, data: users });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        }
+        else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
+        }
+    }
+};
+exports.getUsersWithLibraryName = getUsersWithLibraryName;
 //# sourceMappingURL=admin.controller.js.map

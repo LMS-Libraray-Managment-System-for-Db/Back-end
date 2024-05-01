@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const userService_1 = require("../prisma/userService");
+const userService_1 = require("../prisma/services/userService");
 const resetTokenVerifier = async (req, res, next) => {
     try {
-        const userId = req.cookies["userId"] || req.headers["id"];
+        const email = req.body.email;
+        const user = await (0, userService_1.findUserByEmail)(email);
         const resetToken = req.body.token;
-        const user = await (0, userService_1.findUserByResetToken)(userId, resetToken);
         if (user) {
+            req.headers["user"] = user.username;
+            req.headers["id"] = String(user.user_id);
             const tokenExpirationTime = user.reset_token_expiration;
             if (Date.now() > Number(tokenExpirationTime)) {
                 return res

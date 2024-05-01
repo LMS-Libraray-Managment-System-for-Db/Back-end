@@ -1,7 +1,7 @@
 "use strict";
 // userModel.ts
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AccountType = exports.UserRole = exports.BookType = void 0;
+exports.AccountType = exports.transactionTypes = exports.UserRole = exports.BookType = void 0;
 // bookModel.ts
 var BookType;
 (function (BookType) {
@@ -16,6 +16,12 @@ var UserRole;
     UserRole["Librarian"] = "librarian";
     UserRole["Administrator"] = "administrator";
 })(UserRole || (exports.UserRole = UserRole = {}));
+var transactionTypes;
+(function (transactionTypes) {
+    transactionTypes["BorrowRequest"] = "Borrow_request";
+    transactionTypes["Return"] = "Returned";
+    transactionTypes["Borrowed"] = "Borrowed";
+})(transactionTypes || (exports.transactionTypes = transactionTypes = {}));
 // Define enum for account type
 var AccountType;
 (function (AccountType) {

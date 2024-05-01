@@ -2,8 +2,7 @@ import express from "express";
 import jwtTokenVerifier from "../middleware/jwtTokenVerifier";
 import { body, validationResult } from "express-validator";
 import {
-    
-  
+    addUserToUserLibraries,
     forgotPassword,
     getUserProfile,
     loginUser,
@@ -11,12 +10,19 @@ import {
     registerUser,
     sendVerificationEmail,
     updatePassword,
-    verifyEmail
-    
+    verifyEmail,
 } from "../controller/user.controller";
 import verifyEmailVerifier from "../middleware/verifyEmailVerifier";
 import resetTokenVerifier from "../middleware/resetTokenVerifier";
-import { addUser, checkUserIsActiveByAdmin, deleteUserByEmailOrUsername, editUserByAdmin, filterUsers } from "../controller/admin.controller";
+import {
+    addUser,
+    checkUserIsActiveByAdmin,
+    deleteUserByEmailOrUsername,
+    editUserByAdmin,
+    filterUsers,
+    getAllUsersByAdmin,
+    getUsersWithLibraryName,
+} from "../controller/admin.controller";
 import { toggleUserActiveByLibrarian } from "../controller/librarian.controller";
 
 // let upload = multer();
@@ -31,7 +37,11 @@ userRouter.get("/", (req: express.Request, res: express.Response) => {
 userRouter.post(
     "/register",
     [
-        body("username").not().isEmpty().escape().withMessage("Name is required"),
+        body("username")
+            .not()
+            .isEmpty()
+            .escape()
+            .withMessage("Name is required"),
         body("email").isEmail().escape().withMessage("email isnot valid"),
         body("password")
             .isLength({ min: 8, max: 20 })
@@ -53,25 +63,26 @@ userRouter.post(
     loginUser,
 );
 
-userRouter.get("/profile", jwtTokenVerifier,getUserProfile);
+userRouter.get("/profile", jwtTokenVerifier, getUserProfile);
 
 // userRouter.post("/logout", logoutUser);
 
 userRouter.post(
     "/sendEmail-verify",
     [body("email").isEmail().escape().withMessage("email is not valid")],
-    jwtTokenVerifier,
 
     sendVerificationEmail,
 );
 userRouter.post(
     "/verify-email",
-    [body("email").isEmail().escape().withMessage("email is not valid"),
-    body("verifyCode")
-            .isLength({ min: 5, max:5 })
+    [
+        body("email").isEmail().escape().withMessage("email is not valid"),
+        body("verifyCode")
+            .isLength({ min: 5, max: 5 })
             .escape()
-            .withMessage("code is deficient")],
-            jwtTokenVerifier,
+            .withMessage("code is deficient"),
+    ],
+
     verifyEmailVerifier,
     verifyEmail,
 );
@@ -79,7 +90,6 @@ userRouter.post(
 userRouter.post(
     "/forget-password",
     [body("email").isEmail().escape().withMessage("email is not valid")],
-     jwtTokenVerifier,
 
     forgotPassword,
 );
@@ -91,55 +101,41 @@ userRouter.put(
             .isLength({ min: 5 })
             .escape()
             .withMessage("min 5 characters required for password"),
-            body("token")
-                    .isLength({ min: 5, max:5 })
-                    .escape()
-                    .withMessage("code is deficient")
+        body("token")
+            .isLength({ min: 5, max: 5 })
+            .escape()
+            .withMessage("code is deficient"),
+        body("email").isEmail().escape().withMessage("email is not valid"),
     ],
 
-    jwtTokenVerifier,
     resetTokenVerifier,
     updatePassword,
 );
-userRouter.post(
-    "/refresh-token",
-    jwtTokenVerifier,
-    refreshToken,
-);
-userRouter.post(
-    "/refresh-token",
-    jwtTokenVerifier,
-    refreshToken,
-);
-userRouter.post(
-    "/admin/addUser",
-    jwtTokenVerifier,
-    addUser,
-);
-userRouter.post(
-    "/admin/filter",
-    jwtTokenVerifier,
-    filterUsers,
-);
+userRouter.post("/refresh-token", jwtTokenVerifier, refreshToken);
+userRouter.post("/admin/addUser", jwtTokenVerifier, addUser);
+userRouter.get("/admin/allUsers", jwtTokenVerifier, getAllUsersByAdmin);
+userRouter.post("/admin/filter", jwtTokenVerifier, filterUsers);
 userRouter.delete(
     "/admin/delete",
     jwtTokenVerifier,
     deleteUserByEmailOrUsername,
 );
-userRouter.put(
-    "/admin/edit",
-    jwtTokenVerifier,
-    editUserByAdmin,
-);
-userRouter.post(
-    "/admin/isActive",
-    jwtTokenVerifier,
-    checkUserIsActiveByAdmin,
-);
+userRouter.put("/admin/edit", jwtTokenVerifier, editUserByAdmin);
+userRouter.post("/admin/isActive", jwtTokenVerifier, checkUserIsActiveByAdmin);
 userRouter.post(
     "/librarian/toggle-user-active",
     jwtTokenVerifier,
     toggleUserActiveByLibrarian,
+);
+userRouter.post(
+    "/admin/getLibrarian",
+    jwtTokenVerifier,
+    getUsersWithLibraryName,
+);
+userRouter.post(
+    "/addUserLibraraies/:userId",
+    jwtTokenVerifier,
+    addUserToUserLibraries,
 );
 
 export default userRouter;

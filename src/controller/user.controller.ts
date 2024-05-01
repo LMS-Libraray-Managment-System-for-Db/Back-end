@@ -22,8 +22,8 @@ import {
     updateUserResetToken,
     updateUserVerificationCode,
     updateUserVerificationStatus,
-} from "../prisma/userService";
-
+} from "../prisma/services/userService";
+import { addUserLibrariesForPatron } from "../prisma/services/userًWithLibrarianService";
 
 export const registerUser = async (
     req: express.Request,
@@ -317,7 +317,10 @@ export const verifyEmail = async (
         }
 
         // Find user by verification code
-        const user = await findUserByVerificationCode(userId, verifyCode);
+        const user = await findUserByVerificationCode(
+            parseInt(userId),
+            verifyCode,
+        );
 
         if (user && !user.verified) {
             // Update user's verification status
@@ -423,7 +426,7 @@ export const updatePassword = async (
         }
 
         // Update user's password
-        await updateUserPassword(userId, password);
+        await updateUserPassword(parseInt(userId), password);
 
         return res.status(200).json({
             success: true,
@@ -507,5 +510,39 @@ export const refreshToken = async (
     }
 };
 
-//add user with admin
+//add user to user libraries
 
+export const addUserToUserLibraries = async (
+    req: express.Request,
+    res: express.Response,
+) => {
+    try {
+        const { userId } = req.params;
+        const adminId = req.cookies["userId"] || req.headers["id"];
+        if (!userId) {
+            return res
+                .status(400)
+                .json({ success: false, msg: "User ID is required" });
+        }
+        const user = await findUserById(parseInt(adminId));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "patron") {
+            return res.status(401).json({
+                success: false,
+                msg: "You have no permission 🤬😡",
+            });
+        }
+
+        const result = await addUserLibrariesForPatron(parseInt(userId));
+        return res.status(200).json({ success: true, msg: result });
+    } catch (error) {
+        console.error(error);
+        return res
+            .status(500)
+            .json({ success: false, msg: "Internal server error" });
+    }
+};

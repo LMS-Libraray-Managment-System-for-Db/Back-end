@@ -11,6 +11,7 @@ import http from "http";
 import helmet from "helmet";
 import { defaultLimiter } from "./middleware/reqLimiter";
 import bookRouter from "./router/bookRouter";
+import genreRouter from "./router/genreRouter";
 
 
 const app: express.Application = express();
@@ -23,7 +24,7 @@ app.set("trust proxy", 0);
 // middleware
 app.use(
     cors({
-        origin: true,
+        origin: "*",
         credentials: true,
     }),
 );
@@ -48,6 +49,7 @@ app.use(hpp());
 
 app.use("/api/v1/user", defaultLimiter, userRouter);
 app.use("/api/v1/book", defaultLimiter, bookRouter);
+app.use("/api/v1/genre", defaultLimiter, genreRouter);
 
 
 //-------------------------------------------------------

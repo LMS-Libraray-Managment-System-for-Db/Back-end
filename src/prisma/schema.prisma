@@ -57,6 +57,7 @@ model transactions {
   book_id          Int?
   transaction_type transactions_transaction_type
   transaction_date DateTime?                     @default(now()) @db.Timestamp(0)
+  expiry_date      DateTime?           @db.Timestamp(0)
   users            users?                        @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_ibfk_1")
   books            books?                        @relation(fields: [book_id], references: [book_id], onDelete: NoAction, onUpdate: NoAction, map: "transactions_ibfk_2")
 
@@ -94,8 +95,9 @@ model user_libraries {
 }
 
 enum transactions_transaction_type {
-  Borrow
-  Return
+  Borrow_request
+  Borrowed
+  Returned
 }
 
 enum users_role {

@@ -16,6 +16,7 @@ const http_1 = __importDefault(require("http"));
 const helmet_1 = __importDefault(require("helmet"));
 const reqLimiter_1 = require("./middleware/reqLimiter");
 const bookRouter_1 = __importDefault(require("./router/bookRouter"));
+const genreRouter_1 = __importDefault(require("./router/genreRouter"));
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 dotenv_1.default.config({ path: "./../config.env" });
@@ -25,7 +26,7 @@ const port = Number(process.env.PORT) || 5000;
 app.set("trust proxy", 0);
 // middleware
 app.use((0, cors_1.default)({
-    origin: true,
+    origin: "*",
     credentials: true,
 }));
 app.use(express_1.default.json({ limit: "50kb" }));
@@ -40,6 +41,7 @@ app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use((0, hpp_1.default)());
 app.use("/api/v1/user", reqLimiter_1.defaultLimiter, userRouter_1.default);
 app.use("/api/v1/book", reqLimiter_1.defaultLimiter, bookRouter_1.default);
+app.use("/api/v1/genre", reqLimiter_1.defaultLimiter, genreRouter_1.default);
 //-------------------------------------------------------
 if (hostName && port) {
     server.listen(port, hostName, () => {

@@ -1,6 +1,5 @@
 import express from "express";
-import { findUserByResetToken } from "../prisma/userService";
-
+import { findUserByEmail } from "../prisma/services/userService";
 
 const resetTokenVerifier = async (
     req: express.Request,
@@ -8,11 +7,13 @@ const resetTokenVerifier = async (
     next: express.NextFunction,
 ) => {
     try {
-        const userId = req.cookies["userId"] || req.headers["id"];
-        const resetToken  = req.body.token;
-        const user = await findUserByResetToken(userId,resetToken);
+        const email = req.body.email;
+        const user = await findUserByEmail(email);
+        const resetToken = req.body.token;
 
         if (user) {
+            req.headers["user"] = user.username;
+            req.headers["id"] = String(user.user_id);
             const tokenExpirationTime = user.reset_token_expiration;
             if (Date.now() > Number(tokenExpirationTime)) {
                 return res

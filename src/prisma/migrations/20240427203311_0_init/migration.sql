@@ -4,7 +4,7 @@ CREATE TABLE `books` (
     `title` VARCHAR(255) NOT NULL,
     `author` VARCHAR(100) NOT NULL,
     `isbn` VARCHAR(20) NULL,
-    `type` ENUM('reference', 'fiction', 'non-fiction') NOT NULL,
+    `type` VARCHAR(191) NOT NULL,
     `total_copies` INTEGER NOT NULL,
     `available_copies` INTEGER NOT NULL,
     `library_name` VARCHAR(100) NULL,
@@ -48,8 +48,9 @@ CREATE TABLE `transactions` (
     `transaction_id` INTEGER NOT NULL AUTO_INCREMENT,
     `user_id` INTEGER NULL,
     `book_id` INTEGER NULL,
-    `transaction_type` ENUM('Borrow', 'Return') NOT NULL,
+    `transaction_type` ENUM('Borrow_request', 'Borrowed', 'Returned') NOT NULL,
     `transaction_date` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `expiry_date` TIMESTAMP(0) NULL,
 
     INDEX `book_id`(`book_id`),
     INDEX `user_id`(`user_id`),
@@ -63,7 +64,7 @@ CREATE TABLE `users` (
     `password` VARCHAR(255) NOT NULL,
     `email` VARCHAR(100) NULL,
     `role` ENUM('patron', 'librarian', 'administrator') NOT NULL,
-    `account_type` ENUM('student', 'faculty') NULL,
+    `account_type` ENUM('student', 'faculty', 'librarian', 'administrator') NULL,
     `verificationCode` VARCHAR(50) NULL,
     `verificationCode_expiration` VARCHAR(50) NULL,
     `verified` BOOLEAN NULL,
@@ -76,6 +77,15 @@ CREATE TABLE `users` (
     UNIQUE INDEX `username`(`username`),
     UNIQUE INDEX `email`(`email`),
     PRIMARY KEY (`user_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `user_libraries` (
+    `user_id` INTEGER NOT NULL,
+    `library_name` VARCHAR(100) NOT NULL,
+    `is_active` BOOLEAN NULL DEFAULT true,
+
+    PRIMARY KEY (`user_id`, `library_name`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
@@ -95,3 +105,6 @@ ALTER TABLE `transactions` ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`us
 
 -- AddForeignKey
 ALTER TABLE `transactions` ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`book_id`) REFERENCES `books`(`book_id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE `user_libraries` ADD CONSTRAINT `user_libraries_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE NO ACTION ON UPDATE NO ACTION;

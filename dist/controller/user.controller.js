@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshToken = exports.updatePassword = exports.forgotPassword = exports.verifyEmail = exports.sendVerificationEmail = exports.getUserProfile = exports.loginUser = exports.registerUser = void 0;
+exports.addUserToUserLibraries = exports.refreshToken = exports.updatePassword = exports.forgotPassword = exports.verifyEmail = exports.sendVerificationEmail = exports.getUserProfile = exports.loginUser = exports.registerUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const gravatar_1 = __importDefault(require("gravatar"));
@@ -34,7 +34,8 @@ const express_validator_1 = require("express-validator");
 const config_1 = __importDefault(require("../config/config"));
 const nodemailer_1 = __importDefault(require("../utils/nodemailer"));
 const crypto = __importStar(require("crypto"));
-const userService_1 = require("../prisma/userService");
+const userService_1 = require("../prisma/services/userService");
+const user_WithLibrarianService_1 = require("../prisma/services/user\u064BWithLibrarianService");
 const registerUser = async (req, res) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
@@ -278,7 +279,7 @@ const verifyEmail = async (req, res) => {
             });
         }
         // Find user by verification code
-        const user = await (0, userService_1.findUserByVerificationCode)(userId, verifyCode);
+        const user = await (0, userService_1.findUserByVerificationCode)(parseInt(userId), verifyCode);
         if (user && !user.verified) {
             // Update user's verification status
             await (0, userService_1.updateUserVerificationStatus)(user.user_id);
@@ -375,7 +376,7 @@ const updatePassword = async (req, res) => {
             });
         }
         // Update user's password
-        await (0, userService_1.updateUserPassword)(userId, password);
+        await (0, userService_1.updateUserPassword)(parseInt(userId), password);
         return res.status(200).json({
             success: true,
             msg: "Password updated successfully",
@@ -446,5 +447,37 @@ const refreshToken = async (req, res) => {
     }
 };
 exports.refreshToken = refreshToken;
-//add user with admin
+//add user to user libraries
+const addUserToUserLibraries = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const adminId = req.cookies["userId"] || req.headers["id"];
+        if (!userId) {
+            return res
+                .status(400)
+                .json({ success: false, msg: "User ID is required" });
+        }
+        const user = await (0, userService_1.findUserById)(parseInt(adminId));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "patron") {
+            return res.status(401).json({
+                success: false,
+                msg: "You have no permission 🤬😡",
+            });
+        }
+        const result = await (0, user_WithLibrarianService_1.addUserLibrariesForPatron)(parseInt(userId));
+        return res.status(200).json({ success: true, msg: result });
+    }
+    catch (error) {
+        console.error(error);
+        return res
+            .status(500)
+            .json({ success: false, msg: "Internal server error" });
+    }
+};
+exports.addUserToUserLibraries = addUserToUserLibraries;
 //# sourceMappingURL=user.controller.js.map
