@@ -18,7 +18,7 @@ export async function getAllGenres() {
 }
 export async function addGenres(names: string[]) {
     try {
-        console.log("Names:", names); // Log the received names array
+        console.log("Names:", names);
         const existingGenres = await prisma.genres.findMany({
             where: {
                 name: {
@@ -27,28 +27,30 @@ export async function addGenres(names: string[]) {
             },
         });
 
-        console.log("Existing genres:", existingGenres); // Log the existing genres
         // Filter out existing genres from the names array
         const newNames = names.filter(
             (name) => !existingGenres.some((genre) => genre.name === name),
         );
 
-        console.log("New names:", newNames); // Log the new names after filtering
         // Create new genres
-        const newGenres = await prisma.genres.createMany({
+        await prisma.genres.createMany({
             data: newNames.map((name) => ({ name })),
         });
 
-        console.log("New genres:", newGenres); // Log the newly created genres
-        return newGenres;
+        // Fetch all genres from the database after creating new ones
+        const allGenres = await prisma.genres.findMany();
+
+        console.log("All genres:", allGenres);
+        return allGenres;
     } catch (error) {
         if (error instanceof Error) {
-            throw new Error(`Error adding generes: ${error.message}`);
+            throw new Error(`Error adding genres: ${error.message}`);
         } else {
-            throw new Error(`Error adding generes: Unknown error occurred`);
+            throw new Error(`Error adding genres: Unknown error occurred`);
         }
     }
 }
+
 export async function getGenreIds(genreNames: string[]) {
     try {
         const genres = await prisma.genres.findMany({
@@ -63,18 +65,27 @@ export async function getGenreIds(genreNames: string[]) {
         if (error instanceof Error) {
             throw new Error(`Error getting generes ids: ${error.message}`);
         } else {
-            throw new Error(`Error getting generes ids: Unknown error occurred`);
+            throw new Error(
+                `Error getting generes ids: Unknown error occurred`,
+            );
         }
     }
 }
 export async function deleteGenre(genreId: number) {
     try {
-        // Delete the genre
-        const deletedGenre = await prisma.genres.delete({
+        await prisma.books_genres.deleteMany({
+            where: {
+                genre_id: genreId,
+            },
+        });
+        await prisma.genres.delete({
             where: { genre_id: genreId },
         });
+        const allGenres = await prisma.genres.findMany();
 
-        return deletedGenre;
+        console.log("All genres:", allGenres);
+        return allGenres;
+        // return deletedGenre;
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(`Error deleting genere by id: ${error.message}`);

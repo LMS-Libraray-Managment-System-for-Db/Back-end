@@ -100,6 +100,7 @@ export const deleteGenreController = async (
 
         // Check if the user is a librarian
         if (
+            librarianUser.role !== "librarian" &&
             librarianUser.role !== "administrator"
         ) {
             return res.status(401).json({

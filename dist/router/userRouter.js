@@ -64,11 +64,12 @@ userRouter.post("/refresh-token", jwtTokenVerifier_1.default, user_controller_1.
 userRouter.post("/admin/addUser", jwtTokenVerifier_1.default, admin_controller_1.addUser);
 userRouter.get("/admin/allUsers", jwtTokenVerifier_1.default, admin_controller_1.getAllUsersByAdmin);
 userRouter.post("/admin/filter", jwtTokenVerifier_1.default, admin_controller_1.filterUsers);
-userRouter.delete("/admin/delete", jwtTokenVerifier_1.default, admin_controller_1.deleteUserByEmailOrUsername);
+userRouter.delete("/admin/delete", jwtTokenVerifier_1.default, admin_controller_1.deleteUserByIdentifier);
 userRouter.put("/admin/edit", jwtTokenVerifier_1.default, admin_controller_1.editUserByAdmin);
 userRouter.post("/admin/isActive", jwtTokenVerifier_1.default, admin_controller_1.checkUserIsActiveByAdmin);
 userRouter.post("/librarian/toggle-user-active", jwtTokenVerifier_1.default, librarian_controller_1.toggleUserActiveByLibrarian);
+userRouter.get("/librarian/allUsers", jwtTokenVerifier_1.default, librarian_controller_1.getAllUsersByLibrarian);
 userRouter.post("/admin/getLibrarian", jwtTokenVerifier_1.default, admin_controller_1.getUsersWithLibraryName);
-userRouter.post("/addUserLibraraies/:userId", jwtTokenVerifier_1.default, user_controller_1.addUserToUserLibraries);
+userRouter.post("/addUserLibraraies", jwtTokenVerifier_1.default, user_controller_1.addUserToUserLibraries);
 exports.default = userRouter;
 //# sourceMappingURL=userRouter.js.map

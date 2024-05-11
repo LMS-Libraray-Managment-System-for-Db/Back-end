@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 const prisma = new PrismaClient();
 
-export async function createUser(userData: User) {
+export async function createUser(userData: User ) {
     try {
         const newUser = await prisma.users.create({ data: userData });
         return newUser;
@@ -26,6 +26,18 @@ export async function findUserByEmail(email: string) {
             throw new Error(`Error finding email passwords: ${error.message}`);
         } else {
             throw new Error(`Error finding email: Unknown error occurred`);
+        }
+    }
+}
+export async function findUserByUsername(username: string) {
+    try {
+        const user = await prisma.users.findUnique({ where: { username :username} });
+        return user;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error finding user with username: ${error.message}`);
+        } else {
+            throw new Error(`Error finding user with username: Unknown error occurred`);
         }
     }
 }
@@ -177,15 +189,57 @@ export async function updateUserPassword(userId: number, newPassword: string) {
     });
 }
 
-// get first 30 users each request
+// get first 10 users each request
 export async function getAllUsers(options?: any) {
     try {
-        const { page = 1 } = options || {};
-        const take = 30;
-        const skip = (page - 1) * take;
+        
+        let  page  = options;
+        const take = 10;
+        let skip = (page - 1) * take;
         const users = await prisma.users.findMany({
+            skip: skip,
+            take: take,
+        });
+
+        if (users.length === 0) {
+            return []; // Return an empty array if no users found for the given page
+        }
+
+        return users;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error fetching all users: ${error.message}`);
+        } else {
+            throw new Error(`Error fetching all users: Unknown error occurred`);
+        }
+    }
+}
+
+export async function getAllUsersForLibrarian(librarianName: string,options?: any) {
+    try {
+        let  page  = options;
+        const take = 10;
+        let skip = (page - 1) * take;
+        const users = await prisma.users.findMany({
+            where: {
+                role: 'patron' // Filter users by role "patron"
+            },
             skip,
             take,
+            select: {
+                user_id: true,
+                username: true,
+                email: true,
+                user_libraries: {
+                    where: {
+                        library_name: librarianName
+                    },
+                    select: {
+                        is_active: true
+                    }
+                }
+            
+            },
         });
         return users;
     } catch (error) {
@@ -196,6 +250,7 @@ export async function getAllUsers(options?: any) {
         }
     }
 }
+
 export async function getUsersByFilters(filters: UserFilters) {
     try {
         const users = await prisma.users.findMany({
@@ -241,9 +296,9 @@ export const deleteUserByIdOrEmailOrUsername = async (
         });
     } catch (error) {
         if (error instanceof Error) {
-            throw new Error(`Error filtering users: ${error.message}`);
+            throw new Error(`Error deleting user: ${error.message}`);
         } else {
-            throw new Error(`Error filtering users: Unknown error occurred`);
+            throw new Error(`Error deleting user: Unknown error occurred`);
         }
     }
 };

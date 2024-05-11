@@ -53,6 +53,10 @@ const registerUser = async (req, res) => {
                 .status(400)
                 .json({ success: false, msg: "Email already exists" });
         }
+        else if (existingUser.username == username) {
+            res.status(400)
+                .json({ success: false, msg: "username already exists" });
+        }
         // Encrypt password
         const salt = await bcryptjs_1.default.genSalt(10);
         const hashPass = await bcryptjs_1.default.hash(password, salt);
@@ -69,6 +73,11 @@ const registerUser = async (req, res) => {
             avatar: avatar,
             is_active: false,
         });
+        if (typeof newUser == "string") {
+            res
+                .status(401)
+                .json({ success: false, msg: newUser });
+        }
         // Generate JWT tokens
         const secretKey = process.env.JWT_SECRET_KEY || config_1.default.secret_jwt;
         if (!secretKey) {
@@ -450,14 +459,14 @@ exports.refreshToken = refreshToken;
 //add user to user libraries
 const addUserToUserLibraries = async (req, res) => {
     try {
-        const { userId } = req.params;
-        const adminId = req.cookies["userId"] || req.headers["id"];
-        if (!userId) {
+        // const { userId } = req.params;
+        const user_id = req.cookies["userId"] || req.headers["id"];
+        if (!user_id) {
             return res
                 .status(400)
                 .json({ success: false, msg: "User ID is required" });
         }
-        const user = await (0, userService_1.findUserById)(parseInt(adminId));
+        const user = await (0, userService_1.findUserById)(parseInt(user_id));
         if (!user) {
             return res
                 .status(401)
@@ -469,7 +478,7 @@ const addUserToUserLibraries = async (req, res) => {
                 msg: "You have no permission 🤬😡",
             });
         }
-        const result = await (0, user_WithLibrarianService_1.addUserLibrariesForPatron)(parseInt(userId));
+        const result = await (0, user_WithLibrarianService_1.addUserLibrariesForPatron)(parseInt(user_id));
         return res.status(200).json({ success: true, msg: result });
     }
     catch (error) {

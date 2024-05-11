@@ -47,9 +47,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(hpp());
 
 
-app.use("/api/v1/user", defaultLimiter, userRouter);
-app.use("/api/v1/book", defaultLimiter, bookRouter);
-app.use("/api/v1/genre", defaultLimiter, genreRouter);
+app.use("/api/v1/user", /*defaultLimiter,*/ userRouter);
+app.use("/api/v1/book",/*defaultLimiter,*/ bookRouter);
+app.use("/api/v1/genre", /*defaultLimiter,*/ genreRouter);
 
 
 //-------------------------------------------------------

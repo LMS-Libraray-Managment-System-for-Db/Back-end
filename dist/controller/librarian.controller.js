@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toggleUserActiveByLibrarian = void 0;
+exports.getAllUsersByLibrarian = exports.toggleUserActiveByLibrarian = void 0;
 const userService_1 = require("../prisma/services/userService");
 const user_WithLibrarianService_1 = require("../prisma/services/user\u064BWithLibrarianService");
 const toggleUserActiveByLibrarian = async (req, res) => {
@@ -74,4 +74,39 @@ const toggleUserActiveByLibrarian = async (req, res) => {
     }
 };
 exports.toggleUserActiveByLibrarian = toggleUserActiveByLibrarian;
+const getAllUsersByLibrarian = async (req, res) => {
+    try {
+        const { page } = req.query;
+        const librarianID = req.cookies["userId"] || req.headers["id"];
+        const user = await (0, userService_1.findUserById)(parseInt(librarianID));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "librarian") {
+            return res
+                .status(401)
+                .json({ success: false, msg: "You have no permission 🤬😡" });
+        }
+        const users = await (0, userService_1.getAllUsersForLibrarian)(String(user.library_name), page);
+        if (users) {
+            res.status(200).json({ success: true, data: users });
+        }
+        else {
+            res.status(401).json({ success: false, msg: "No user found" });
+        }
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        }
+        else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
+        }
+    }
+};
+exports.getAllUsersByLibrarian = getAllUsersByLibrarian;
 //# sourceMappingURL=librarian.controller.js.map

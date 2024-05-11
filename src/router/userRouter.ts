@@ -17,13 +17,16 @@ import resetTokenVerifier from "../middleware/resetTokenVerifier";
 import {
     addUser,
     checkUserIsActiveByAdmin,
-    deleteUserByEmailOrUsername,
+    deleteUserByIdentifier,
     editUserByAdmin,
     filterUsers,
     getAllUsersByAdmin,
     getUsersWithLibraryName,
 } from "../controller/admin.controller";
-import { toggleUserActiveByLibrarian } from "../controller/librarian.controller";
+import {
+    getAllUsersByLibrarian,
+    toggleUserActiveByLibrarian,
+} from "../controller/librarian.controller";
 
 // let upload = multer();
 const userRouter: express.Router = express.Router();
@@ -115,11 +118,7 @@ userRouter.post("/refresh-token", jwtTokenVerifier, refreshToken);
 userRouter.post("/admin/addUser", jwtTokenVerifier, addUser);
 userRouter.get("/admin/allUsers", jwtTokenVerifier, getAllUsersByAdmin);
 userRouter.post("/admin/filter", jwtTokenVerifier, filterUsers);
-userRouter.delete(
-    "/admin/delete",
-    jwtTokenVerifier,
-    deleteUserByEmailOrUsername,
-);
+userRouter.delete("/admin/delete", jwtTokenVerifier, deleteUserByIdentifier);
 userRouter.put("/admin/edit", jwtTokenVerifier, editUserByAdmin);
 userRouter.post("/admin/isActive", jwtTokenVerifier, checkUserIsActiveByAdmin);
 userRouter.post(
@@ -127,13 +126,14 @@ userRouter.post(
     jwtTokenVerifier,
     toggleUserActiveByLibrarian,
 );
+userRouter.get("/librarian/allUsers", jwtTokenVerifier, getAllUsersByLibrarian);
 userRouter.post(
     "/admin/getLibrarian",
     jwtTokenVerifier,
     getUsersWithLibraryName,
 );
 userRouter.post(
-    "/addUserLibraraies/:userId",
+    "/addUserLibraraies",
     jwtTokenVerifier,
     addUserToUserLibraries,
 );

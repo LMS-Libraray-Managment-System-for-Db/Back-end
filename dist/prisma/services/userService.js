@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersByLibrary = exports.getAllLibrariesWithLibrarians = exports.findUserByIdentifier = exports.updateUserActive = exports.isUserActive = exports.updateUserById = exports.deleteUserByIdOrEmailOrUsername = exports.getUsersByFilters = exports.getAllUsers = exports.updateUserPassword = exports.updateUserResetToken = exports.updateUserVerificationStatus = exports.findUserByVerificationCode = exports.updateUserVerificationCode = exports.findUserById = exports.comparePasswords = exports.findUserByEmail = exports.createUser = void 0;
+exports.getUsersByLibrary = exports.getAllLibrariesWithLibrarians = exports.findUserByIdentifier = exports.updateUserActive = exports.isUserActive = exports.updateUserById = exports.deleteUserByIdOrEmailOrUsername = exports.getUsersByFilters = exports.getAllUsersForLibrarian = exports.getAllUsers = exports.updateUserPassword = exports.updateUserResetToken = exports.updateUserVerificationStatus = exports.findUserByVerificationCode = exports.updateUserVerificationCode = exports.findUserById = exports.comparePasswords = exports.findUserByUsername = exports.findUserByEmail = exports.createUser = void 0;
 const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma = new client_1.PrismaClient();
@@ -37,6 +37,21 @@ async function findUserByEmail(email) {
     }
 }
 exports.findUserByEmail = findUserByEmail;
+async function findUserByUsername(username) {
+    try {
+        const user = await prisma.users.findUnique({ where: { username: username } });
+        return user;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error finding user with username: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error finding user with username: Unknown error occurred`);
+        }
+    }
+}
+exports.findUserByUsername = findUserByUsername;
 // compare password
 async function comparePasswords(password, hashedPassword) {
     try {
@@ -169,16 +184,19 @@ async function updateUserPassword(userId, newPassword) {
     });
 }
 exports.updateUserPassword = updateUserPassword;
-// get first 30 users each request
+// get first 10 users each request
 async function getAllUsers(options) {
     try {
-        const { page = 1 } = options || {};
-        const take = 30;
-        const skip = (page - 1) * take;
+        let page = options;
+        const take = 10;
+        let skip = (page - 1) * take;
         const users = await prisma.users.findMany({
-            skip,
-            take,
+            skip: skip,
+            take: take,
         });
+        if (users.length === 0) {
+            return []; // Return an empty array if no users found for the given page
+        }
         return users;
     }
     catch (error) {
@@ -191,6 +209,43 @@ async function getAllUsers(options) {
     }
 }
 exports.getAllUsers = getAllUsers;
+async function getAllUsersForLibrarian(librarianName, options) {
+    try {
+        let page = options;
+        const take = 10;
+        let skip = (page - 1) * take;
+        const users = await prisma.users.findMany({
+            where: {
+                role: 'patron' // Filter users by role "patron"
+            },
+            skip,
+            take,
+            select: {
+                user_id: true,
+                username: true,
+                email: true,
+                user_libraries: {
+                    where: {
+                        library_name: librarianName
+                    },
+                    select: {
+                        is_active: true
+                    }
+                }
+            },
+        });
+        return users;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Error fetching all users: ${error.message}`);
+        }
+        else {
+            throw new Error(`Error fetching all users: Unknown error occurred`);
+        }
+    }
+}
+exports.getAllUsersForLibrarian = getAllUsersForLibrarian;
 async function getUsersByFilters(filters) {
     try {
         const users = await prisma.users.findMany({
@@ -236,10 +291,10 @@ const deleteUserByIdOrEmailOrUsername = async (identifier) => {
     }
     catch (error) {
         if (error instanceof Error) {
-            throw new Error(`Error filtering users: ${error.message}`);
+            throw new Error(`Error deleting user: ${error.message}`);
         }
         else {
-            throw new Error(`Error filtering users: Unknown error occurred`);
+            throw new Error(`Error deleting user: Unknown error occurred`);
         }
     }
 };

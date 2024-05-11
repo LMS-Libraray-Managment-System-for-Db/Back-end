@@ -21,7 +21,7 @@ export interface UserFilters {
     role?: UserRole; // 'patron', 'librarian', 'administrator'
     account_type?: AccountType; // 'student', 'faculty','librarian', 'administrator'
     verified?: boolean;
-    isActive?: boolean;
+    is_active?: boolean;
     library_name?: string;
     email?: string;
     username?: string;
@@ -66,7 +66,7 @@ export interface Transaction {
     transaction_id: number;
     user_id: number;
     book_id: number;
-    transaction_type: "Borrow_request" | "Returned"|"Borrowed";
+    transaction_type: "Borrow_request" | "Returned"|"Borrowed";// as state in borrow
     transaction_date: Date; // Assuming it's a string for simplicity, can be a Date object if needed
 }
 // reservationModel.ts
@@ -77,7 +77,7 @@ export interface Reservation {
     book_id: number;
     reservation_date: Date; // Assuming it's a string for simplicity, can be a Date object if needed
     expiry_date?: string | null; // Optional
-    status: "Pending" | "Confirmed" | "Expired";
+    status: "Pending" | "Confirmed" | "Expired";// as status in get reservation
 }
 
 

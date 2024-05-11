@@ -14,7 +14,6 @@ const body_parser_1 = __importDefault(require("body-parser"));
 const hpp_1 = __importDefault(require("hpp"));
 const http_1 = __importDefault(require("http"));
 const helmet_1 = __importDefault(require("helmet"));
-const reqLimiter_1 = require("./middleware/reqLimiter");
 const bookRouter_1 = __importDefault(require("./router/bookRouter"));
 const genreRouter_1 = __importDefault(require("./router/genreRouter"));
 const app = (0, express_1.default)();
@@ -39,9 +38,9 @@ app.use(body_parser_1.default.urlencoded({ extended: true }));
 // middleware to protect against HTTP Parameter Pollution attacks  put after parsing process
 //It prevents multiple values for the same parameter,
 app.use((0, hpp_1.default)());
-app.use("/api/v1/user", reqLimiter_1.defaultLimiter, userRouter_1.default);
-app.use("/api/v1/book", reqLimiter_1.defaultLimiter, bookRouter_1.default);
-app.use("/api/v1/genre", reqLimiter_1.defaultLimiter, genreRouter_1.default);
+app.use("/api/v1/user", /*defaultLimiter,*/ userRouter_1.default);
+app.use("/api/v1/book", /*defaultLimiter,*/ bookRouter_1.default);
+app.use("/api/v1/genre", /*defaultLimiter,*/ genreRouter_1.default);
 //-------------------------------------------------------
 if (hostName && port) {
     server.listen(port, hostName, () => {

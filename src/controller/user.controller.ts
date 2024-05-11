@@ -40,11 +40,14 @@ export const registerUser = async (
 
         const verificationCode = crypto.randomInt(10000, 99999).toString();
         // Check if user already exists with the email
-        const existingUser = await findUserByEmail(email);
+        const existingUser:any = await findUserByEmail(email);
         if (existingUser) {
             return res
                 .status(400)
                 .json({ success: false, msg: "Email already exists" });
+        }else if(existingUser.username ==username){
+            res.status(400)
+                .json({ success: false, msg: "username already exists" });
         }
 
         // Encrypt password
@@ -65,6 +68,12 @@ export const registerUser = async (
             avatar: avatar,
             is_active: false,
         });
+        if(typeof newUser =="string"){
+            res
+                .status(401)
+                .json({ success: false, msg:newUser });
+           
+        }
 
         // Generate JWT tokens
         const secretKey: string | undefined =
@@ -517,14 +526,14 @@ export const addUserToUserLibraries = async (
     res: express.Response,
 ) => {
     try {
-        const { userId } = req.params;
-        const adminId = req.cookies["userId"] || req.headers["id"];
-        if (!userId) {
+        // const { userId } = req.params;
+        const user_id = req.cookies["userId"] || req.headers["id"];
+        if (!user_id) {
             return res
                 .status(400)
                 .json({ success: false, msg: "User ID is required" });
         }
-        const user = await findUserById(parseInt(adminId));
+        const user = await findUserById(parseInt(user_id));
         if (!user) {
             return res
                 .status(401)
@@ -537,7 +546,7 @@ export const addUserToUserLibraries = async (
             });
         }
 
-        const result = await addUserLibrariesForPatron(parseInt(userId));
+        const result = await addUserLibrariesForPatron(parseInt(user_id));
         return res.status(200).json({ success: true, msg: result });
     } catch (error) {
         console.error(error);

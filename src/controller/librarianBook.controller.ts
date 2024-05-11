@@ -71,6 +71,7 @@ export const addBookByLibrarian = async (
                 available_copies,
                 library_name: librarianUser.library_name,
             },
+            String(librarianUser.library_name),
             genreNames,
         );
 
@@ -128,14 +129,14 @@ export const updateBookByLibrarianAPI = async (
                 .status(400)
                 .json({ success: false, msg: "Library name is not available" });
         }
-        const updatedBook = updateBook(
+        const books = await updateBook(
             librarianUser.library_name,
             parseInt(bookId),
             { title, author, isbn, type, total_copies, available_copies },
             genreNames,
         );
-
-        if (!updatedBook) {
+            
+        if (!books) {
             return res.status(404).json({
                 success: false,
                 msg: `Book with ID ${bookId} not found in the librarian's library`,
@@ -145,7 +146,7 @@ export const updateBookByLibrarianAPI = async (
         return res.status(200).json({
             success: true,
             msg: "Book updated successfully",
-            data: updatedBook,
+            data: books,
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -191,12 +192,12 @@ export const deleteBookByLibrarianAPI = async (
                 .status(400)
                 .json({ success: false, msg: "Library name is not available" });
         }
-        const deletedBook = deleteBookById(
+        const books = await deleteBookById(
             librarianUser.library_name,
             parseInt(bookId),
         );
 
-        if (!deletedBook) {
+        if (!books) {
             return res.status(404).json({
                 success: false,
                 msg: `Book with ID ${bookId} not found in the librarian's library`,
@@ -206,7 +207,7 @@ export const deleteBookByLibrarianAPI = async (
         return res.status(200).json({
             success: true,
             msg: "Book deleted successfully",
-            data: deletedBook,
+            data: books,
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -250,12 +251,12 @@ export const filterBooksForLibrarian = async (
         if (library_name) filters.library_name = String(library_name);
         if (book_id) filters.book_id = Number(book_id);
 
-        // Check if any filter is provided
-        if (Object.keys(filters).length === 0) {
-            return res
-                .status(400)
-                .json({ success: false, msg: "Filter data is required." });
-        }
+        // // Check if any filter is provided
+        // if (Object.keys(filters).length === 0) {
+        //     return res
+        //         .status(400)
+        //         .json({ success: false, msg: "Filter data is required." });
+        // }
 
         if (librarianUser.library_name) {
             const books = await findBooksByCriteriaForLibrarian(
@@ -296,8 +297,8 @@ export const getRequestedBorrowBooks = async (
     res: express.Response,
 ) => {
     try {
-        const { state } = req.params;
-
+        const { state } = req.query;
+        console.log(state);
         const librarianId = req.cookies["userId"] || req.headers["id"];
 
         // Find the librarian user
@@ -652,14 +653,13 @@ export const checkExpiredRequested = async (
         // );
 
         // Check for expired books
-        const { expiredBooks, notExpiredBooks } = await checkExpiredBooksForLibrarian(librarianUser.library_name);
+        const  expiredRecords = await checkExpiredBooksForLibrarian(librarianUser.library_name);
 
        
             return res.status(200).json({
                 success: true,
                 msg: "Success",
-                expiredBooks: expiredBooks,
-                notExpiredBooks: notExpiredBooks
+                data:expiredRecords
             });
         
     } catch (error) {
@@ -667,3 +667,58 @@ export const checkExpiredRequested = async (
         return res.status(500).json({ success: false, msg: "Unknown error" });
     }
 };
+// export const checkExpiredRequested = async (
+//     req: express.Request,
+//     res: express.Response,
+// ) => {
+//     try {
+//         // const { state } = req.params;
+
+//         const librarianId = req.cookies["userId"] || req.headers["id"];
+
+//         // Find the librarian user
+//         const librarianUser = await findUserById(parseInt(librarianId));
+//         if (!librarianUser) {
+//             return res
+//                 .status(401)
+//                 .json({ success: false, msg: "Who are you? 🤔" });
+//         }
+
+//         // Check if the user is a librarian
+//         if (
+//             librarianUser.role !== "librarian" &&
+//             librarianUser.role !== "administrator"
+//         ) {
+//             return res.status(401).json({
+//                 success: false,
+//                 msg: "You do not have permission to perform this action. 😡",
+//             });
+//         }
+//         if (librarianUser.library_name === null) {
+//             return res
+//                 .status(400)
+//                 .json({ success: false, msg: "Library name is not available" });
+//         }
+
+//         // Get the requested borrow books data
+//         // const data = await getBorrowedBooksForLibrarian(
+//         //     librarianUser.library_name,
+//         //     state,
+//         // );
+
+//         // Check for expired books
+//         const { expiredBooks, notExpiredBooks } = await checkExpiredBooksForLibrarian(librarianUser.library_name);
+
+       
+//             return res.status(200).json({
+//                 success: true,
+//                 msg: "Success",
+//                 expiredBooks: expiredBooks,
+//                 notExpiredBooks: notExpiredBooks
+//             });
+        
+//     } catch (error) {
+//         console.error('Error retrieving requested borrow books for librarian:', error);
+//         return res.status(500).json({ success: false, msg: "Unknown error" });
+//     }
+// };

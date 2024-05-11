@@ -18,6 +18,7 @@ import * as crypto from "crypto";
 import {
     findUserById,
     findUserByIdentifier,
+    getAllUsersForLibrarian,
     isUserActive,
     updateUserActive,
 } from "../prisma/services/userService";
@@ -109,6 +110,44 @@ export const toggleUserActiveByLibrarian = async (
             return res
                 .status(500)
                 .json({ success: false, msg: "Unknown error" });
+        }
+    }
+};
+
+export const getAllUsersByLibrarian = async (
+    req: express.Request,
+    res: express.Response,
+) => {
+    try {
+        const { page } = req.query;
+        const librarianID = req.cookies["userId"] || req.headers["id"];
+
+        const user = await findUserById(parseInt(librarianID));
+        if (!user) {
+            return res
+                .status(401)
+                .json({ success: false, msg: "who are you?🤔" });
+        }
+        if (user.role !== "librarian") {
+            return res
+                .status(401)
+                .json({ success: false, msg: "You have no permission 🤬😡" });
+        }
+
+        const users = await getAllUsersForLibrarian(String(user.library_name),page);
+
+        if (users) {
+            res.status(200).json({ success: true, data: users });
+        } else {
+            res.status(401).json({ success: false, msg: "No user found" });
+        }
+    } catch (error) {
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        } else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "unkown error" });
         }
     }
 };

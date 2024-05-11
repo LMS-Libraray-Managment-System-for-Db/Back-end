@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUsersWithLibraryName = exports.checkUserIsActiveByAdmin = exports.editUserByAdmin = exports.deleteUserByEmailOrUsername = exports.getAllUsersByAdmin = exports.filterUsers = exports.addUser = void 0;
+exports.getUsersWithLibraryName = exports.checkUserIsActiveByAdmin = exports.editUserByAdmin = exports.deleteUserByIdentifier = exports.getAllUsersByAdmin = exports.filterUsers = exports.addUser = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const gravatar_1 = __importDefault(require("gravatar"));
 const crypto = __importStar(require("crypto"));
@@ -53,6 +53,23 @@ const addUser = async (req, res) => {
             r: "pg",
             d: "mm",
         });
+        const existingUserName = await (0, userService_1.findUserByUsername)(userData.username);
+        const existingUseremail = await (0, userService_1.findUserByEmail)(userData.email);
+        console.log(existingUserName);
+        if (existingUseremail) {
+            return res
+                .status(400)
+                .json({ success: false, msg: "Email already exists" });
+        }
+        if (existingUserName) {
+            return res
+                .status(400)
+                .json({ success: false, msg: "username already exists" });
+        }
+        if (userData.role !== "librarian" ||
+            userData.account_type !== "librarian") {
+            userData.library_name == null;
+        }
         const newUser = await (0, userService_1.createUser)({
             username: userData.username.toLowerCase(),
             password: hashPass,
@@ -71,19 +88,11 @@ const addUser = async (req, res) => {
                 .json({ success: false, msg: "Error adding user" });
         }
         else {
+            const users = await (0, userService_1.getAllUsers)(1);
             return res.status(200).json({
                 success: true,
                 msg: "User added success",
-                data: {
-                    user_id: newUser.user_id,
-                    username: newUser.username,
-                    email: newUser.email,
-                    role: newUser.role,
-                    account_type: newUser.account_type,
-                    verified: newUser.verified,
-                    avatar: newUser.avatar,
-                    is_active: newUser.is_active,
-                },
+                data: users,
             });
         }
     }
@@ -115,22 +124,30 @@ const filterUsers = async (req, res) => {
                 .json({ success: false, msg: "You have no permission 🤬😡" });
         }
         // Extract query parameters from the request
-        const { email, username, user_id, role, accountType, verified, isActive, } = req.query;
+        const { email, username, user_id, library_name, role, account_type, verified, is_active, } = req.query;
         // Apply filters based on query parameters
         if (role)
             filters.role = role;
-        if (accountType)
-            filters.account_type = accountType;
-        if (verified)
-            filters.verified = Boolean(verified);
-        if (isActive)
-            filters.isActive = Boolean(isActive);
+        if (library_name && typeof library_name === 'string')
+            filters.library_name = library_name;
+        if (account_type)
+            filters.account_type = account_type;
+        if (verified) {
+            let boolValue = verified === "true";
+            filters.verified = boolValue;
+        }
+        if (is_active) {
+            let boolValue = is_active === "true";
+            filters.is_active = boolValue;
+        }
         if (email)
             filters.email = email.toString();
         if (username)
             filters.username = username.toString();
         if (user_id)
             filters.user_id = Number(user_id);
+        console.log(filters.is_active);
+        console.log(filters);
         const users = await (0, userService_1.getUsersByFilters)(filters);
         if (users) {
             res.status(200).json({ success: true, data: users });
@@ -187,8 +204,9 @@ const getAllUsersByAdmin = async (req, res) => {
     }
 };
 exports.getAllUsersByAdmin = getAllUsersByAdmin;
-const deleteUserByEmailOrUsername = async (req, res) => {
+const deleteUserByIdentifier = async (req, res) => {
     const { identifier } = req.body;
+    console.log(identifier);
     const adminId = req.cookies["userId"] || req.headers["id"];
     const user = await (0, userService_1.findUserById)(parseInt(adminId));
     if (!user) {
@@ -222,11 +240,12 @@ const deleteUserByEmailOrUsername = async (req, res) => {
         }
     }
 };
-exports.deleteUserByEmailOrUsername = deleteUserByEmailOrUsername;
+exports.deleteUserByIdentifier = deleteUserByIdentifier;
 const editUserByAdmin = async (req, res) => {
     try {
         const { userId, updatedUserData } = req.body; // Assuming you receive userId and updatedUserData in the request body
         const adminId = req.cookies["userId"] || req.headers["id"];
+        console.log(userId, updatedUserData);
         // Find admin user by ID
         const adminUser = await (0, userService_1.findUserById)(parseInt(adminId));
         if (!adminUser || adminUser.role !== "administrator") {
@@ -236,7 +255,7 @@ const editUserByAdmin = async (req, res) => {
             });
         }
         // Update user data
-        const updatedUser = await (0, userService_1.updateUserById)(userId, updatedUserData);
+        const updatedUser = await (0, userService_1.updateUserById)(parseInt(userId), updatedUserData);
         if (!updatedUser) {
             return res.status(404).json({
                 success: false,

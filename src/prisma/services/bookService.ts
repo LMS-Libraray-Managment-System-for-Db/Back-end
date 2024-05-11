@@ -14,44 +14,68 @@ const prisma = new PrismaClient();
 // Function to create a new book
 export async function createBookWithGenres(
     bookData: Book,
+    librarianName: string,
     genreNames: string[],
-) {
+  ) {
     try {
-        const newBook = await prisma.books.create({ data: bookData });
-        const genreIds = await getGenreIds(genreNames);
-
-        const bookGenresData = genreIds.map((genreId: any) => ({
-            book_id: newBook.book_id,
-            genre_id: genreId,
-        }));
-        await prisma.books_genres.createMany({ data: bookGenresData });
-        const genres = await prisma.genres.findMany({
-            where: {
-                genre_id: {
-                    in: genreIds,
-                },
-            },
+      
+      const newBook = await prisma.books.create({ data: bookData });
+  
+      
+      const genreIds = await getGenreIds(genreNames);
+  
+      
+      const bookGenresData = genreIds.map((genreId: any) => ({
+        book_id: newBook.book_id,
+        genre_id: genreId,
+      }));
+  
+      
+      await prisma.books_genres.createMany({ data: bookGenresData });
+  
+      
+      const allBooks = await prisma.books.findMany({ where: { library_name: librarianName } });
+  
+      
+      const allGenres = await prisma.genres.findMany();
+  
+      
+      const bookGenresMap: Record<number, string[]> = {};
+  
+      for (const book of allBooks) {
+        
+        const bookGenres = await prisma.books_genres.findMany({
+          where: { book_id: book.book_id },
+          include: { genres: true },
         });
-        console.log(genres);
-        const genreNamesForBook = genres.map((genre) => genre.name);
-
-        return {
-            ...newBook,
-            genres: genreNamesForBook,
-        };
+  
+      
+        const genresForBook = bookGenres.map(bg => bg.genres.name);
+  
+        
+        bookGenresMap[book.book_id] = genresForBook;
+      }
+  
+      
+      return allBooks.map((book) => ({
+        book_id: book.book_id,
+        title: book.title,
+        author: book.author,
+        isbn: book.isbn,
+        type: book.type,
+        total_copies: book.total_copies,
+        available_copies: book.available_copies,
+        library_name: book.library_name,
+        genres: bookGenresMap[book.book_id] || [],
+      }));
     } catch (error) {
-        if (error instanceof Error) {
-            throw new Error(
-                `Error creating book with genres: ${error.message}`,
-            );
-        } else {
-            throw new Error(
-                `Error creating book with genres: Unknown error occurred`,
-            );
-        }
+      if (error instanceof Error) {
+        throw new Error(`Error creating book with genres and returning all books: ${error.message}`);
+      } else {
+        throw new Error(`Error creating book with genres and returning all books: Unknown error occurred`);
+      }
     }
-}
-
+  }
 // Function to find a book by its ID
 export async function findBookById(bookId: number) {
     try {
@@ -100,21 +124,42 @@ export async function updateBook(
         }));
         await prisma.books_genres.createMany({ data: bookGenresData });
 
-        // Fetch genre names for the updated book
-        const genres = await prisma.genres.findMany({
-            where: {
-                genre_id: {
-                    in: genreIds,
-                },
-            },
-        });
-        const genreNamesForBook = genres.map((genre) => genre.name);
+        // Fetch all books associated with the specified library name
+        const allBooks = await prisma.books.findMany({ where: { library_name: librarianLibraryName } });
 
-        // Return updated book with genre names
-        return {
-            ...updatedBook,
-            genres: genreNamesForBook,
-        };
+        // Fetch all genres
+        const allGenres = await prisma.genres.findMany();
+
+        // Fetch genres for each book in parallel
+        const bookGenresPromises = allBooks.map(book => 
+            prisma.books_genres.findMany({
+                where: { book_id: book.book_id },
+                include: { genres: true },
+            })
+        );
+
+        // Wait for all genre fetching promises to resolve
+        const bookGenresResults = await Promise.all(bookGenresPromises);
+
+        // Map book IDs to their genres
+        const bookGenresMap: Record<number, string[]> = {};
+        bookGenresResults.forEach((bookGenres, index) => {
+            const genresForBook = bookGenres.map(bg => bg.genres.name);
+            bookGenresMap[allBooks[index].book_id] = genresForBook;
+        });
+
+        // Return all books with their genres
+        return allBooks.map((book) => ({
+            book_id: book.book_id,
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            type: book.type,
+            total_copies: book.total_copies,
+            available_copies: book.available_copies,
+            library_name: book.library_name,
+            genres: bookGenresMap[book.book_id] || [],
+        }));
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(`Error updating book: ${error.message}`);
@@ -140,7 +185,41 @@ export async function deleteBookById(
             where: { book_id: bookId, library_name: librarianLibraryName },
         });
 
-        return deletedBook;
+        const allBooks = await prisma.books.findMany({ where: { library_name: librarianLibraryName } });
+
+        // Fetch all genres
+        const allGenres = await prisma.genres.findMany();
+
+        // Fetch genres for each book in parallel
+        const bookGenresPromises = allBooks.map(book => 
+            prisma.books_genres.findMany({
+                where: { book_id: book.book_id },
+                include: { genres: true },
+            })
+        );
+
+        // Wait for all genre fetching promises to resolve
+        const bookGenresResults = await Promise.all(bookGenresPromises);
+
+        // Map book IDs to their genres
+        const bookGenresMap: Record<number, string[]> = {};
+        bookGenresResults.forEach((bookGenres, index) => {
+            const genresForBook = bookGenres.map(bg => bg.genres.name);
+            bookGenresMap[allBooks[index].book_id] = genresForBook;
+        });
+
+        // Return all books with their genres
+        return allBooks.map((book) => ({
+            book_id: book.book_id,
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            type: book.type,
+            total_copies: book.total_copies,
+            available_copies: book.available_copies,
+            library_name: book.library_name,
+            genres: bookGenresMap[book.book_id] || [],
+        }));
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(`Error deleting book by id: ${error.message}`);
@@ -152,39 +231,7 @@ export async function deleteBookById(
     }
 }
 
-// Function to find books by specific criteria
-// export async function findBooksByCriteria(criteria: BookFilters) {
-//     try {
-//         const books = await prisma.books.findMany({
-//             where: criteria,
-//         });
-//         return books;
-//     } catch (error) {
-//         if (error instanceof Error) {
-//             throw new Error(`Error finding book by criteria: ${error.message}`);
-//         } else {
-//             throw new Error(
-//                 `Error finding book by criteria: Unknown error occurred`,
-//             );
-//         }
-//     }
-// };
 
-// export async function findBookByName(name: string) {
-//     try {
-//         const searchTerm = name.toLowerCase();
-//         const books = await prisma.$queryRaw`SELECT * FROM books WHERE LOWER(title) LIKE '%' || ${searchTerm} || '%'`;
-
-//         return books;
-//     } catch (error) {
-//         // Handle errors
-//         if (error instanceof Error) {
-//             throw new Error(`Error finding book by name: ${error.message}`);
-//         } else {
-//             throw new Error(`Error finding book by name: Unknown error occurred`);
-//         }
-//     }
-// };
 
 export async function findBooksByCriteriaForLibrarian(
     criteria: BookFilters,
@@ -232,27 +279,53 @@ export async function findBooksByCriteriaForLibrarian(
             }
         }
 
+        // Fetch all books based on the criteria
         const books = await prisma.books.findMany({
             where: {
                 library_name: libraryName,
-
                 AND: filters,
             },
         });
 
-        return books;
+        // Map book IDs to their associated genre names
+        const bookGenresMap: Record<number, string[]> = {};
+
+        for (const book of books) {
+            // Find genres associated with the current book
+            const bookGenres = await prisma.books_genres.findMany({
+                where: { book_id: book.book_id },
+                include: { genres: true },
+            });
+
+            // Extract genre names for the current book
+            const genresForBook = bookGenres.map(bg => bg.genres.name);
+
+            // Map book ID to its associated genre names
+            bookGenresMap[book.book_id] = genresForBook;
+        }
+
+        // Return books along with their associated genre names
+        return books.map((book) => ({
+            book_id: book.book_id,
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            type: book.type,
+            total_copies: book.total_copies,
+            available_copies: book.available_copies,
+            library_name: book.library_name,
+            genres: bookGenresMap[book.book_id] || [],
+        }));
     } catch (error) {
         if (error instanceof Error) {
-            throw new Error(
-                `Error finding books by criteria: ${error.message}`,
-            );
+            throw new Error(`Error finding books by criteria: ${error.message}`);
         } else {
-            throw new Error(
-                `Error finding books by criteria: Unknown error occurred`,
-            );
+            throw new Error(`Error finding books by criteria: Unknown error occurred`);
         }
     }
 }
+
+
 
 export async function findBooksByCriteria(criteria: BookFilters) {
     try {
@@ -302,13 +375,41 @@ export async function findBooksByCriteria(criteria: BookFilters) {
             include: {
                 books_genres: {
                     include: {
-                        genres: true, // Include genre details in the result
+                        genres: true,
                     },
                 },
             },
         });
-        console.log(books);
-        return books;
+        
+        // Map book IDs to their associated genre names
+        const bookGenresMap: Record<number, string[]> = {};
+
+        for (const book of books) {
+            // Find genres associated with the current book
+            const bookGenres = await prisma.books_genres.findMany({
+                where: { book_id: book.book_id },
+                include: { genres: true },
+            });
+
+            // Extract genre names for the current book
+            const genresForBook = bookGenres.map(bg => bg.genres.name);
+
+            // Map book ID to its associated genre names
+            bookGenresMap[book.book_id] = genresForBook;
+        }
+
+        // Return books along with their associated genre names
+        return books.map((book) => ({
+            book_id: book.book_id,
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            type: book.type,
+            total_copies: book.total_copies,
+            available_copies: book.available_copies,
+            library_name: book.library_name,
+            genres: bookGenresMap[book.book_id] || [],
+        }));
     } catch (error) {
         if (error instanceof Error) {
             throw new Error(
@@ -533,8 +634,6 @@ export async function getBorrowedBooksForLibrarian(
             where: {
                 transaction_type: state,
                 books: {
-                    // Adjusted field name based on your Prisma schema
-
                     library_name: librarianName,
                 },
             },
@@ -561,7 +660,7 @@ export async function getBorrowedBooksForLibrarian(
                 },
             },
         });
-        console.log(borrowedBooks);
+        ;
         return borrowedBooks;
     } catch (error) {
         console.error("Error retrieving borrowed books for librarian", error);
@@ -946,6 +1045,71 @@ export async function returnBookForLibrarian(userId: number, bookId: number) {
     }
 }
 
+// export async function checkExpiredBooksForLibrarian(librarianName: string) {
+//     try {
+//         // Get all transactions with status "Borrowed" or "Borrow_request" for the librarian's library
+//         const transactions = await prisma.transactions.findMany({
+//             where: {
+//                 transaction_type: {
+//                     in: ["Borrowed", "Borrow_request"],
+//                 },
+//                 books: {
+//                     library_name: librarianName,
+//                 },
+//             },
+//             include: {
+//                 books: true,
+//             },
+//         });
+
+//         // Get all reservations with status "Confirmed" for the librarian's library
+//         const reservations = await prisma.reservations.findMany({
+//             where: {
+//                 status: "Confirmed",
+//                 books: {
+//                     library_name: librarianName,
+//                 },
+//             },
+//             include: {
+//                 books: true,
+//             },
+//         });
+
+//         // Combine transactions and reservations into a single array
+//         const allRecords = [...transactions, ...reservations];
+
+//         // Get the current date
+//         const currentDate = new Date(getCurrentDate());
+
+//         // Check each record for expiry
+//         const expiredBooks: string[] = [];
+//         const notExpiredBooks: string[] = [];
+
+//         for (const record of allRecords) {
+//             if (record.expiry_date && record.books) {
+//                 const expiryDate = new Date(record.expiry_date);
+//                 if (currentDate > expiryDate) {
+//                     expiredBooks.push(
+//                         `Book ID: ${record.book_id}, Title: ${record.books.title}`,
+//                     );
+//                 } else {
+//                     notExpiredBooks.push(
+//                         `Book ID: ${record.book_id}, Title: ${record.books.title}`,
+//                     );
+//                 }
+//             } else if (record.books) {
+//                 notExpiredBooks.push(
+//                     `Book ID: ${record.book_id}, Title: ${record.books.title}`,
+//                 );
+//             }
+//         }
+
+//         return { expiredBooks, notExpiredBooks };
+//     } catch (error) {
+//         console.error("Error checking expired books for librarian:", error);
+//         throw new Error("Failed to check expired books");
+//     }
+// }
 export async function checkExpiredBooksForLibrarian(librarianName: string) {
     try {
         // Get all transactions with status "Borrowed" or "Borrow_request" for the librarian's library
@@ -960,6 +1124,20 @@ export async function checkExpiredBooksForLibrarian(librarianName: string) {
             },
             include: {
                 books: true,
+                users: {
+                    select: {
+                        email: true,
+                        username: true,
+                        user_libraries: {
+                            where: {
+                                library_name: librarianName
+                            },
+                            select: {
+                                is_active: true
+                            }
+                        }
+                    }
+                }
             },
         });
 
@@ -973,6 +1151,20 @@ export async function checkExpiredBooksForLibrarian(librarianName: string) {
             },
             include: {
                 books: true,
+                users: {
+                    select: {
+                        email: true,
+                        username: true,
+                        user_libraries: {
+                            where: {
+                                library_name: librarianName
+                            },
+                            select: {
+                                is_active: true
+                            }
+                        }
+                    }
+                }
             },
         });
 
@@ -982,30 +1174,16 @@ export async function checkExpiredBooksForLibrarian(librarianName: string) {
         // Get the current date
         const currentDate = new Date(getCurrentDate());
 
-        // Check each record for expiry
-        const expiredBooks: string[] = [];
-        const notExpiredBooks: string[] = [];
-
-        for (const record of allRecords) {
+        // Filter records to include only expired ones
+        const expiredRecords = allRecords.filter((record) => {
             if (record.expiry_date && record.books) {
                 const expiryDate = new Date(record.expiry_date);
-                if (currentDate > expiryDate) {
-                    expiredBooks.push(
-                        `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-                    );
-                } else {
-                    notExpiredBooks.push(
-                        `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-                    );
-                }
-            } else if (record.books) {
-                notExpiredBooks.push(
-                    `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-                );
+                return currentDate > expiryDate;
             }
-        }
+            return false;
+        });
 
-        return { expiredBooks, notExpiredBooks };
+        return expiredRecords;
     } catch (error) {
         console.error("Error checking expired books for librarian:", error);
         throw new Error("Failed to check expired books");

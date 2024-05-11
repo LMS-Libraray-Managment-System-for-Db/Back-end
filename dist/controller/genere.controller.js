@@ -80,7 +80,8 @@ const deleteGenreController = async (req, res) => {
                 .json({ success: false, msg: "Who are you? 🤔" });
         }
         // Check if the user is a librarian
-        if (librarianUser.role !== "administrator") {
+        if (librarianUser.role !== "librarian" &&
+            librarianUser.role !== "administrator") {
             return res.status(401).json({
                 success: false,
                 msg: "You do not have permission to perform this action. 😡",
