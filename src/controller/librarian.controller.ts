@@ -102,7 +102,7 @@ export const toggleUserActiveByLibrarian = async (
             isActive,
         );
 
-        return res.status(200).json({ success: true, isActive });
+        return res.status(200).json({ success: true, isActive,id:user.user_id });
     } catch (error) {
         if (error instanceof Error) {
             return res.status(500).json({ success: false, msg: error.message });
@@ -135,9 +135,15 @@ export const getAllUsersByLibrarian = async (
         }
 
         const users = await getAllUsersForLibrarian(String(user.library_name),page);
-
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                msg: "No more data💔💔(❁´◡`❁)",
+                page:parseInt(page as string)
+            });
+        }
         if (users) {
-            res.status(200).json({ success: true, data: users });
+            res.status(200).json({ success: true, data: users ,page:parseInt(page as string) });
         } else {
             res.status(401).json({ success: false, msg: "No user found" });
         }

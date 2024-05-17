@@ -3,8 +3,8 @@ import jwtTokenVerifier from "../middleware/jwtTokenVerifier";
 import { body, validationResult } from "express-validator";
 import verifyEmailVerifier from "../middleware/verifyEmailVerifier";
 import resetTokenVerifier from "../middleware/resetTokenVerifier";
-import { addBookByLibrarian, checkExpiredRequested, confirmBorrowForTheLibrarian, confirmReserveForTheLibrarian, confirmReturnForTheLibrarian, deleteBookByLibrarianAPI,  filterBooksForLibrarian, getRequestedBorrowBooks, getRequestedReservedBooks, updateBookByLibrarianAPI } from "../controller/librarianBook.controller";
-import {deleteReservationHandler, deleteTransactionHandler, borrowBookForUser, filterBooksForUser, reserveBookForUser } from "../controller/userBook.controller";
+import { addBookByLibrarian, checkExpiredRequested, confirmBorrowForTheLibrarian, confirmReserveForTheLibrarian, confirmReturnForTheLibrarian, deleteBookByLibrarianAPI,  deleteReservationHandlerForLibraraian,  deleteTransactionHandlerForLibraraian,  filterBooksForLibrarian, getRequestedBorrowBooks, getRequestedReservedBooks, updateBookByLibrarianAPI } from "../controller/librarianBook.controller";
+import {/*deleteReservationHandler, deleteTransactionHandler,*/ borrowBookForUser, filterBooksForUser, reserveBookForUser, getRequestedReservedBooksForUser, getRequestedTransactionsBooksForUser } from "../controller/userBook.controller";
 
 const bookRouter: express.Router = express.Router();
 
@@ -68,20 +68,40 @@ bookRouter.post(
     jwtTokenVerifier,
     confirmReturnForTheLibrarian,
 );
+// bookRouter.delete(
+//     "/deleteReservation",
+//     jwtTokenVerifier,
+//     deleteReservationHandler,
+// );
+// bookRouter.delete(
+//     "/deleteTransaction",
+//     jwtTokenVerifier,
+//     deleteTransactionHandler,
+// );
 bookRouter.delete(
-    "/deleteReservation",
+    "/librarian/deleteReservation",
     jwtTokenVerifier,
-    deleteReservationHandler,
+    deleteReservationHandlerForLibraraian,
 );
 bookRouter.delete(
-    "/deleteTransaction",
+    "/librarian/deleteTransaction",
     jwtTokenVerifier,
-    deleteTransactionHandler,
+    deleteTransactionHandlerForLibraraian,
 );
 bookRouter.get(
     "/librarian/checkExpired",
     jwtTokenVerifier,
     checkExpiredRequested,
+);
+bookRouter.get(
+    "/getResrevations",
+    jwtTokenVerifier,
+    getRequestedReservedBooksForUser,
+);
+bookRouter.get(
+    "/getTransactions",
+    jwtTokenVerifier,
+    getRequestedTransactionsBooksForUser,
 );
 
 export default bookRouter;

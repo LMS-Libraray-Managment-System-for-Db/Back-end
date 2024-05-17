@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkExpiredRequested = exports.confirmReturnForTheLibrarian = exports.deleteReservationHandler = exports.deleteTransactionHandler = exports.confirmReserveForTheLibrarian = exports.confirmBorrowForTheLibrarian = exports.getRequestedReservedBooks = exports.getRequestedBorrowBooks = exports.filterBooksForLibrarian = exports.deleteBookByLibrarianAPI = exports.updateBookByLibrarianAPI = exports.addBookByLibrarian = void 0;
+exports.checkExpiredRequested = exports.confirmReturnForTheLibrarian = exports.deleteReservationHandlerForLibraraian = exports.deleteTransactionHandlerForLibraraian = exports.confirmReserveForTheLibrarian = exports.confirmBorrowForTheLibrarian = exports.getRequestedReservedBooks = exports.getRequestedBorrowBooks = exports.filterBooksForLibrarian = exports.deleteBookByLibrarianAPI = exports.updateBookByLibrarianAPI = exports.addBookByLibrarian = void 0;
 const bookService_1 = require("../prisma/services/bookService");
 const userService_1 = require("../prisma/services/userService");
 const addBookByLibrarian = async (req, res) => {
@@ -32,10 +32,11 @@ const addBookByLibrarian = async (req, res) => {
             available_copies,
             library_name: librarianUser.library_name,
         }, String(librarianUser.library_name), genreNames);
+        const books = await (0, bookService_1.findBooksByCriteriaForLibrarian)({}, String(librarianUser.library_name));
         return res.status(200).json({
             success: true,
             msg: "Book added successfully",
-            data: newBook,
+            data: books,
         });
     }
     catch (error) {
@@ -132,7 +133,7 @@ const deleteBookByLibrarianAPI = async (req, res) => {
         return res.status(200).json({
             success: true,
             msg: "Book deleted successfully",
-            data: books,
+            id: bookId,
         });
     }
     catch (error) {
@@ -149,6 +150,7 @@ const deleteBookByLibrarianAPI = async (req, res) => {
 exports.deleteBookByLibrarianAPI = deleteBookByLibrarianAPI;
 const filterBooksForLibrarian = async (req, res) => {
     try {
+        const { page } = req.query;
         const filters = {};
         const librarianID = req.cookies["userId"] || req.headers["id"];
         const librarianUser = await (0, userService_1.findUserById)(parseInt(librarianID));
@@ -184,17 +186,19 @@ const filterBooksForLibrarian = async (req, res) => {
         //         .json({ success: false, msg: "Filter data is required." });
         // }
         if (librarianUser.library_name) {
-            const books = await (0, bookService_1.findBooksByCriteriaForLibrarian)(filters, librarianUser.library_name);
+            const books = await (0, bookService_1.findBooksByCriteriaForLibrarian)(filters, librarianUser.library_name, page);
             if (!books || books.length === 0) {
                 return res.status(404).json({
                     success: false,
-                    msg: "No books found matching the criteria.",
+                    msg: "No more data💔💔(❁´◡`❁)",
+                    page: parseInt(page)
                 });
             }
             return res.status(200).json({
                 success: true,
                 msg: "Books filtered successfully.",
                 data: books,
+                page: parseInt(page)
             });
         }
         else {
@@ -219,6 +223,7 @@ exports.filterBooksForLibrarian = filterBooksForLibrarian;
 const getRequestedBorrowBooks = async (req, res) => {
     try {
         const { state } = req.query;
+        const { page } = req.query;
         console.log(state);
         const librarianId = req.cookies["userId"] || req.headers["id"];
         // Find the librarian user
@@ -241,7 +246,14 @@ const getRequestedBorrowBooks = async (req, res) => {
                 .status(400)
                 .json({ success: false, msg: "Library name is not available" });
         }
-        const data = await (0, bookService_1.getBorrowedBooksForLibrarian)(librarianUser.library_name, state);
+        const data = await (0, bookService_1.getBorrowedBooksForLibrarian)(librarianUser.library_name, state, page);
+        if (!data || data.length === 0) {
+            return res.status(404).json({
+                success: false,
+                msg: "No more data💔💔(❁´◡`❁)",
+                page: parseInt(page)
+            });
+        }
         if (!data) {
             return res.status(200).json({
                 success: true,
@@ -253,6 +265,7 @@ const getRequestedBorrowBooks = async (req, res) => {
                 success: true,
                 msg: "success",
                 data: data,
+                page: parseInt(page)
             });
         }
     }
@@ -270,7 +283,8 @@ const getRequestedBorrowBooks = async (req, res) => {
 exports.getRequestedBorrowBooks = getRequestedBorrowBooks;
 const getRequestedReservedBooks = async (req, res) => {
     try {
-        const { status } = req.params;
+        const { status } = req.query;
+        const { page } = req.query;
         const librarianId = req.cookies["userId"] || req.headers["id"];
         // Find the librarian user
         const librarianUser = await (0, userService_1.findUserById)(parseInt(librarianId));
@@ -293,11 +307,12 @@ const getRequestedReservedBooks = async (req, res) => {
                 .json({ success: false, msg: "Library name is not available" });
         }
         // Assuming getPendingReservationsForLibrarian function exists and takes librarian's library name and reservation state as parameters
-        const data = await (0, bookService_1.getReservationsForLibrarian)(librarianUser.library_name, status);
+        const data = await (0, bookService_1.getReservationsForLibrarian)(librarianUser.library_name, status, page);
         if (!data || data.length === 0) {
             return res.status(200).json({
                 success: true,
                 msg: "No reservations found",
+                page: parseInt(page)
             });
         }
         else {
@@ -305,6 +320,7 @@ const getRequestedReservedBooks = async (req, res) => {
                 success: true,
                 msg: "Success",
                 data: data,
+                page: parseInt(page)
             });
         }
     }
@@ -346,8 +362,9 @@ const confirmBorrowForTheLibrarian = async (req, res) => {
         }
         // Confirm borrow request
         const message = await (0, bookService_1.confirmBorrowForLibrarian)(librarianUser.library_name, parseInt(transactionId));
+        const data = await (0, bookService_1.getBorrowedBooksForLibrarian)(librarianUser.library_name, "Borrow_request");
         // Send response
-        res.status(200).json({ success: true, msg: message });
+        res.status(200).json({ success: true, msg: message, data: data });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -387,8 +404,9 @@ const confirmReserveForTheLibrarian = async (req, res) => {
         }
         // Confirm reservation
         const message = await (0, bookService_1.confirmReserveForLibrarian)(librarianUser.library_name, parseInt(reservationId));
+        const data = await (0, bookService_1.getReservationsForLibrarian)(librarianUser.library_name, "Pending");
         // Send response
-        res.status(200).json({ success: true, msg: message });
+        res.status(200).json({ success: true, msg: message, data: data });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -402,10 +420,11 @@ const confirmReserveForTheLibrarian = async (req, res) => {
     }
 };
 exports.confirmReserveForTheLibrarian = confirmReserveForTheLibrarian;
-const deleteTransactionHandler = async (req, res) => {
+const deleteTransactionHandlerForLibraraian = async (req, res) => {
     try {
-        const { transactionId } = req.query;
+        let { transactionId } = req.query;
         const userId = req.cookies["userId"] || req.headers["id"];
+        console.log(transactionId);
         // Find the librarian user
         const user = await (0, userService_1.findUserById)(parseInt(userId));
         if (!user) {
@@ -415,17 +434,18 @@ const deleteTransactionHandler = async (req, res) => {
         }
         // Delete the transaction
         const message = await (0, bookService_1.deleteTransaction)(parseInt(transactionId), parseInt(userId));
-        res.status(200).json({ success: true, msg: message });
+        console.log(transactionId);
+        res.status(200).json({ success: true, msg: message, id: transactionId });
     }
     catch (error) {
         console.error('Error deleting transaction:', error);
         res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
     }
 };
-exports.deleteTransactionHandler = deleteTransactionHandler;
-const deleteReservationHandler = async (req, res) => {
+exports.deleteTransactionHandlerForLibraraian = deleteTransactionHandlerForLibraraian;
+const deleteReservationHandlerForLibraraian = async (req, res) => {
     try {
-        const { reservationId } = req.query;
+        let { reservationId } = req.query;
         const userId = req.cookies["userId"] || req.headers["id"];
         // Find the librarian user
         const user = await (0, userService_1.findUserById)(parseInt(userId));
@@ -436,14 +456,14 @@ const deleteReservationHandler = async (req, res) => {
         }
         // Delete the transaction
         const message = await (0, bookService_1.deleteReservation)(parseInt(reservationId), parseInt(userId));
-        res.status(200).json({ success: true, msg: message });
+        res.status(200).json({ success: true, msg: message, id: reservationId });
     }
     catch (error) {
         console.error('Error deleting transaction:', error);
         res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
     }
 };
-exports.deleteReservationHandler = deleteReservationHandler;
+exports.deleteReservationHandlerForLibraraian = deleteReservationHandlerForLibraraian;
 const confirmReturnForTheLibrarian = async (req, res) => {
     try {
         const { transactionId } = req.query;
@@ -470,7 +490,8 @@ const confirmReturnForTheLibrarian = async (req, res) => {
         }
         // Assuming confirmReturnForLibrarian function exists
         const message = await (0, bookService_1.confirmReturnForLibrarian)(librarianUser.library_name, parseInt(transactionId));
-        res.status(200).json({ success: true, msg: message });
+        const data = await (0, bookService_1.getBorrowedBooksForLibrarianToConfirm)(librarianUser.library_name, "Borrowed");
+        res.status(200).json({ success: true, msg: message, data: data });
     }
     catch (error) {
         console.error("Error confirming return request for librarian", error);
@@ -524,51 +545,4 @@ const checkExpiredRequested = async (req, res) => {
     }
 };
 exports.checkExpiredRequested = checkExpiredRequested;
-// export const checkExpiredRequested = async (
-//     req: express.Request,
-//     res: express.Response,
-// ) => {
-//     try {
-//         // const { state } = req.params;
-//         const librarianId = req.cookies["userId"] || req.headers["id"];
-//         // Find the librarian user
-//         const librarianUser = await findUserById(parseInt(librarianId));
-//         if (!librarianUser) {
-//             return res
-//                 .status(401)
-//                 .json({ success: false, msg: "Who are you? 🤔" });
-//         }
-//         // Check if the user is a librarian
-//         if (
-//             librarianUser.role !== "librarian" &&
-//             librarianUser.role !== "administrator"
-//         ) {
-//             return res.status(401).json({
-//                 success: false,
-//                 msg: "You do not have permission to perform this action. 😡",
-//             });
-//         }
-//         if (librarianUser.library_name === null) {
-//             return res
-//                 .status(400)
-//                 .json({ success: false, msg: "Library name is not available" });
-//         }
-//         // Get the requested borrow books data
-//         // const data = await getBorrowedBooksForLibrarian(
-//         //     librarianUser.library_name,
-//         //     state,
-//         // );
-//         // Check for expired books
-//         const { expiredBooks, notExpiredBooks } = await checkExpiredBooksForLibrarian(librarianUser.library_name);
-//             return res.status(200).json({
-//                 success: true,
-//                 msg: "Success",
-//                 expiredBooks: expiredBooks,
-//                 notExpiredBooks: notExpiredBooks
-//             });
-//     } catch (error) {
-//         console.error('Error retrieving requested borrow books for librarian:', error);
-//         return res.status(500).json({ success: false, msg: "Unknown error" });
-//     }
-// };
 //# sourceMappingURL=librarianBook.controller.js.map

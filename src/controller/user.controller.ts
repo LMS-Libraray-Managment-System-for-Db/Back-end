@@ -35,19 +35,18 @@ export const registerUser = async (
     }
     try {
         const { username, email, password, account_type } = req.body;
+        console.log(username.toLowerCase());
         const avatar = gravatar.url(email, { s: "300", r: "pg", d: "mm" });
-        console.log(avatar);
 
         const verificationCode = crypto.randomInt(10000, 99999).toString();
         // Check if user already exists with the email
         const existingUser:any = await findUserByEmail(email);
         if (existingUser) {
-            return res
-                .status(400)
-                .json({ success: false, msg: "Email already exists" });
-        }else if(existingUser.username ==username){
-            res.status(400)
-                .json({ success: false, msg: "username already exists" });
+            if (existingUser.username === username) {
+                return res.status(400).json({ success: false, msg: "Username already exists" });
+            } else {
+                return res.status(400).json({ success: false, msg: "Email already exists" });
+            }
         }
 
         // Encrypt password

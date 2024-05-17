@@ -3,7 +3,11 @@ import jwt from "jsonwebtoken";
 import gravatar from "gravatar";
 // import { User } from "../interface/models.interface";
 import express from "express";
-import { addGenres, deleteGenre, getAllGenres } from "../prisma/services/genereService";
+import {
+    addGenres,
+    deleteGenre,
+    getAllGenres,
+} from "../prisma/services/genereService";
 import { validationResult } from "express-validator";
 import config from "../config/config";
 import { generateRandomString } from "../utils/randomString";
@@ -12,10 +16,11 @@ import * as crypto from "crypto";
 
 import { findUserById } from "../prisma/services/userService";
 
-
-export const getAllGenresApi = async (req: express.Request, res: express.Response) => {
+export const getAllGenresApi = async (
+    req: express.Request,
+    res: express.Response,
+) => {
     try {
-        
         const librarianId = req.cookies["userId"] || req.headers["id"];
         const librarianUser = await findUserById(parseInt(librarianId));
         if (!librarianUser) {
@@ -35,7 +40,13 @@ export const getAllGenresApi = async (req: express.Request, res: express.Respons
             });
         }
         const genres = await getAllGenres();
-        return res.status(200).json({ success: true,msg: "genre sended successfully",data: genres });
+        return res
+            .status(200)
+            .json({
+                success: true,
+                msg: "genre sended successfully",
+                data: genres,
+            });
     } catch (error) {
         if (error instanceof Error) {
             return res.status(500).json({ success: false, msg: error.message });
@@ -71,7 +82,14 @@ export const addGenresController = async (
             });
         }
         const newGenres = await addGenres(names);
-        return res.status(201).json({ success: true,msg: "genre updated successfully", genres: newGenres });
+        const genres = await getAllGenres();
+        return res
+            .status(201)
+            .json({
+                success: true,
+                msg: "genre updated successfully",
+                data: genres,
+            });
     } catch (error) {
         if (error instanceof Error) {
             return res.status(500).json({ success: false, msg: error.message });
@@ -110,7 +128,14 @@ export const deleteGenreController = async (
         }
 
         const deletedGenre = await deleteGenre(parseInt(genreId));
-        return res.status(200).json({ success: true, msg: "genre deleted successfully", deletedGenre });
+        const genres = await getAllGenres();
+        return res
+            .status(200)
+            .json({
+                success: true,
+                msg: "genre deleted successfully",
+                data: genres,
+            });
     } catch (error) {
         if (error instanceof Error) {
             return res.status(500).json({ success: false, msg: error.message });

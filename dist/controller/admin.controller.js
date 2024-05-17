@@ -110,6 +110,7 @@ const addUser = async (req, res) => {
 exports.addUser = addUser;
 const filterUsers = async (req, res) => {
     try {
+        const { page } = req.query;
         const filters = {};
         const adminId = req.cookies["userId"] || req.headers["id"];
         const user = await (0, userService_1.findUserById)(parseInt(adminId));
@@ -148,9 +149,16 @@ const filterUsers = async (req, res) => {
             filters.user_id = Number(user_id);
         console.log(filters.is_active);
         console.log(filters);
-        const users = await (0, userService_1.getUsersByFilters)(filters);
+        const users = await (0, userService_1.getUsersByFilters)(filters, page);
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                msg: "No more data💔💔(❁´◡`❁)",
+                page: parseInt(page)
+            });
+        }
         if (users) {
-            res.status(200).json({ success: true, data: users });
+            res.status(200).json({ success: true, data: users, page: parseInt(page) });
         }
         else {
             res.status(401).json({ success: false, msg: "No user found" });
@@ -185,8 +193,15 @@ const getAllUsersByAdmin = async (req, res) => {
                 .json({ success: false, msg: "You have no permission 🤬😡" });
         }
         const users = await (0, userService_1.getAllUsers)(page);
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                msg: "No more data💔💔(❁´◡`❁)",
+                page: parseInt(page)
+            });
+        }
         if (users) {
-            res.status(200).json({ success: true, data: users });
+            res.status(200).json({ success: true, data: users, page: parseInt(page) });
         }
         else {
             res.status(401).json({ success: false, msg: "No user found" });

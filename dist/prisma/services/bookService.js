@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkExpiredBooksForLibrarian = exports.returnBookForLibrarian = exports.confirmReturnForLibrarian = exports.confirmReserveForLibrarian = exports.deleteReservation = exports.deleteTransaction = exports.confirmBorrowForLibrarian = exports.getBorrowedBooksForLibrarian = exports.getReservationsForLibrarian = exports.reserveBook = exports.borrowBook = exports.findBooksByCriteria = exports.findBooksByCriteriaForLibrarian = exports.deleteBookById = exports.updateBook = exports.findBookById = exports.createBookWithGenres = void 0;
+exports.getTransactionsForUser = exports.getReservationsForUser = exports.checkExpiredBooksForLibrarian = exports.confirmReturnForLibrarian = exports.confirmReserveForLibrarian = exports.deleteReservation = exports.deleteTransaction = exports.confirmBorrowForLibrarian = exports.getBorrowedBooksForLibrarianToConfirm = exports.getBorrowedBooksForLibrarian = exports.getReservationsForLibrarian = exports.reserveBook = exports.borrowBook = exports.findBooksByCriteria = exports.findBooksByCriteriaForLibrarian = exports.deleteBookById = exports.updateBook = exports.findBookById = exports.createBookWithGenres = void 0;
 const client_1 = require("@prisma/client");
 const genereService_1 = require("./genereService");
 const userService_1 = require("./userService");
@@ -142,34 +142,37 @@ async function deleteBookById(librarianLibraryName, bookId) {
         const deletedBook = await prisma.books.delete({
             where: { book_id: bookId, library_name: librarianLibraryName },
         });
-        const allBooks = await prisma.books.findMany({ where: { library_name: librarianLibraryName } });
+        // const allBooks = await prisma.books.findMany({ where: { library_name: librarianLibraryName } });
         // Fetch all genres
         const allGenres = await prisma.genres.findMany();
-        // Fetch genres for each book in parallel
-        const bookGenresPromises = allBooks.map(book => prisma.books_genres.findMany({
-            where: { book_id: book.book_id },
-            include: { genres: true },
-        }));
-        // Wait for all genre fetching promises to resolve
-        const bookGenresResults = await Promise.all(bookGenresPromises);
-        // Map book IDs to their genres
-        const bookGenresMap = {};
-        bookGenresResults.forEach((bookGenres, index) => {
-            const genresForBook = bookGenres.map(bg => bg.genres.name);
-            bookGenresMap[allBooks[index].book_id] = genresForBook;
-        });
-        // Return all books with their genres
-        return allBooks.map((book) => ({
-            book_id: book.book_id,
-            title: book.title,
-            author: book.author,
-            isbn: book.isbn,
-            type: book.type,
-            total_copies: book.total_copies,
-            available_copies: book.available_copies,
-            library_name: book.library_name,
-            genres: bookGenresMap[book.book_id] || [],
-        }));
+        // // Fetch genres for each book in parallel
+        // const bookGenresPromises = allBooks.map(book => 
+        //     prisma.books_genres.findMany({
+        //         where: { book_id: book.book_id },
+        //         include: { genres: true },
+        //     })
+        // );
+        // // Wait for all genre fetching promises to resolve
+        // const bookGenresResults = await Promise.all(bookGenresPromises);
+        // // Map book IDs to their genres
+        // const bookGenresMap: Record<number, string[]> = {};
+        // bookGenresResults.forEach((bookGenres, index) => {
+        //     const genresForBook = bookGenres.map(bg => bg.genres.name);
+        //     bookGenresMap[allBooks[index].book_id] = genresForBook;
+        // });
+        // // Return all books with their genres
+        // return allBooks.map((book) => ({
+        //     book_id: book.book_id,
+        //     title: book.title,
+        //     author: book.author,
+        //     isbn: book.isbn,
+        //     type: book.type,
+        //     total_copies: book.total_copies,
+        //     available_copies: book.available_copies,
+        //     library_name: book.library_name,
+        //     genres: bookGenresMap[book.book_id] || [],
+        // }));
+        return deletedBook;
     }
     catch (error) {
         if (error instanceof Error) {
@@ -181,8 +184,11 @@ async function deleteBookById(librarianLibraryName, bookId) {
     }
 }
 exports.deleteBookById = deleteBookById;
-async function findBooksByCriteriaForLibrarian(criteria, libraryName) {
+async function findBooksByCriteriaForLibrarian(criteria, libraryName, options) {
     try {
+        let page = options || 1;
+        let take = 10;
+        let skip = (page - 1) * take;
         // Construct dynamic filters based on criteria
         const filters = [];
         for (const key in criteria) {
@@ -230,11 +236,17 @@ async function findBooksByCriteriaForLibrarian(criteria, libraryName) {
         }
         // Fetch all books based on the criteria
         const books = await prisma.books.findMany({
+            take: take,
+            skip: skip,
             where: {
                 library_name: libraryName,
                 AND: filters,
             },
         });
+        console.log(books.length);
+        if (books.length == 0) {
+            return [];
+        }
         // Map book IDs to their associated genre names
         const bookGenresMap = {};
         for (const book of books) {
@@ -345,7 +357,6 @@ async function findBooksByCriteria(criteria) {
             book_id: book.book_id,
             title: book.title,
             author: book.author,
-            isbn: book.isbn,
             type: book.type,
             total_copies: book.total_copies,
             available_copies: book.available_copies,
@@ -506,9 +517,15 @@ async function reserveBook(userId, bookId, reservationDays) {
     }
 }
 exports.reserveBook = reserveBook;
-async function getReservationsForLibrarian(librarianName, status) {
+async function getReservationsForLibrarian(librarianName, status, options) {
     try {
+        let page = options || 1;
+        let take = 10;
+        let skip = (page - 1) * take;
+        console.log(status);
         const pendingReservations = await prisma.reservations.findMany({
+            take: take,
+            skip: skip,
             where: {
                 status: status,
                 books: {
@@ -537,7 +554,6 @@ async function getReservationsForLibrarian(librarianName, status) {
                 },
             },
         });
-        console.log(pendingReservations);
         return pendingReservations;
     }
     catch (error) {
@@ -546,7 +562,53 @@ async function getReservationsForLibrarian(librarianName, status) {
     }
 }
 exports.getReservationsForLibrarian = getReservationsForLibrarian;
-async function getBorrowedBooksForLibrarian(librarianName, state) {
+async function getBorrowedBooksForLibrarian(librarianName, state, options) {
+    try {
+        let page = options || 1;
+        let take = 10;
+        let skip = (page - 1) * take;
+        const borrowedBooks = await prisma.transactions.findMany({
+            take: take,
+            skip: skip,
+            where: {
+                transaction_type: state,
+                books: {
+                    library_name: librarianName,
+                },
+            },
+            include: {
+                books: {
+                    select: {
+                        title: true,
+                        author: true,
+                        isbn: true,
+                        type: true,
+                        total_copies: true,
+                        available_copies: true,
+                        // Add other fields you want to include from the `book` entity
+                    },
+                },
+                users: {
+                    select: {
+                        username: true,
+                        email: true,
+                        role: true,
+                        account_type: true,
+                        is_active: true,
+                    },
+                },
+            },
+        });
+        ;
+        return borrowedBooks;
+    }
+    catch (error) {
+        console.error("Error retrieving borrowed books for librarian", error);
+        throw new Error("Failed to borrow book");
+    }
+}
+exports.getBorrowedBooksForLibrarian = getBorrowedBooksForLibrarian;
+async function getBorrowedBooksForLibrarianToConfirm(librarianName, state) {
     try {
         const borrowedBooks = await prisma.transactions.findMany({
             where: {
@@ -586,7 +648,7 @@ async function getBorrowedBooksForLibrarian(librarianName, state) {
         throw new Error("Failed to borrow book");
     }
 }
-exports.getBorrowedBooksForLibrarian = getBorrowedBooksForLibrarian;
+exports.getBorrowedBooksForLibrarianToConfirm = getBorrowedBooksForLibrarianToConfirm;
 async function confirmBorrowForLibrarian(librarianName, transactionId) {
     try {
         // Check if the transaction exists and is pending
@@ -657,14 +719,14 @@ async function deleteTransaction(transactionId, userId) {
             const book = await prisma.books.findUnique({
                 where: { book_id: book_id },
             });
-            if (book) {
-                await prisma.books.update({
-                    where: { book_id: book_id },
-                    data: {
-                        available_copies: book.available_copies + 1,
-                    },
-                });
-            }
+            // if (book) {
+            //     await prisma.books.update({
+            //         where: { book_id: book_id },
+            //         data: {
+            //             available_copies: book.available_copies + 1,
+            //         },
+            //     });
+            // }
             // Delete the transaction
             await prisma.transactions.delete({
                 where: {
@@ -737,14 +799,14 @@ async function deleteReservation(reservationId, userId) {
             const book = await prisma.books.findUnique({
                 where: { book_id: book_id },
             });
-            if (book) {
-                await prisma.books.update({
-                    where: { book_id: book_id },
-                    data: {
-                        available_copies: book.available_copies + 1,
-                    },
-                });
-            }
+            // if (book) {
+            //     await prisma.books.update({
+            //         where: { book_id: book_id },
+            //         data: {
+            //             available_copies: book.available_copies + 1,
+            //         },
+            //     });
+            // }
             // Delete the reservation
             await prisma.reservations.delete({
                 where: {
@@ -902,104 +964,41 @@ async function confirmReturnForLibrarian(librarianName, transactionId) {
     }
 }
 exports.confirmReturnForLibrarian = confirmReturnForLibrarian;
-async function returnBookForLibrarian(userId, bookId) {
-    try {
-        // Find the transaction record for the user and book
-        const transaction = await prisma.transactions.findFirst({
-            where: {
-                user_id: userId,
-                book_id: bookId,
-                transaction_type: "Borrowed",
-            },
-        });
-        // If transaction record exists, update it to mark as returned
-        if (transaction) {
-            const currentDate = new Date((0, dateHandeling_1.getCurrentDate)());
-            const expiryDate = transaction.expiry_date
-                ? new Date(transaction.expiry_date)
-                : null;
-            if (!expiryDate) {
-                return "Expiry date is not available";
-            }
-            // Check if the book is returned before the expiry date
-            if (currentDate <= expiryDate) {
-                await prisma.transactions.update({
-                    where: { transaction_id: transaction.transaction_id },
-                    data: { transaction_type: "Returned" },
-                });
-                return "Book returned successfully";
-            }
-            else {
-                return "Book returned after the expiry date";
-            }
-        }
-        else {
-            return "No transaction found for the user and book";
-        }
-    }
-    catch (error) {
-        console.error("Error returning book:", error);
-        throw new Error("Failed to return book");
-    }
-}
-exports.returnBookForLibrarian = returnBookForLibrarian;
-// export async function checkExpiredBooksForLibrarian(librarianName: string) {
+// export async function returnBookForLibrarian(userId: number, bookId: number) {
 //     try {
-//         // Get all transactions with status "Borrowed" or "Borrow_request" for the librarian's library
-//         const transactions = await prisma.transactions.findMany({
+//         // Find the transaction record for the user and book
+//         const transaction = await prisma.transactions.findFirst({
 //             where: {
-//                 transaction_type: {
-//                     in: ["Borrowed", "Borrow_request"],
-//                 },
-//                 books: {
-//                     library_name: librarianName,
-//                 },
-//             },
-//             include: {
-//                 books: true,
+//                 user_id: userId,
+//                 book_id: bookId,
+//                 transaction_type: "Borrowed",
 //             },
 //         });
-//         // Get all reservations with status "Confirmed" for the librarian's library
-//         const reservations = await prisma.reservations.findMany({
-//             where: {
-//                 status: "Confirmed",
-//                 books: {
-//                     library_name: librarianName,
-//                 },
-//             },
-//             include: {
-//                 books: true,
-//             },
-//         });
-//         // Combine transactions and reservations into a single array
-//         const allRecords = [...transactions, ...reservations];
-//         // Get the current date
-//         const currentDate = new Date(getCurrentDate());
-//         // Check each record for expiry
-//         const expiredBooks: string[] = [];
-//         const notExpiredBooks: string[] = [];
-//         for (const record of allRecords) {
-//             if (record.expiry_date && record.books) {
-//                 const expiryDate = new Date(record.expiry_date);
-//                 if (currentDate > expiryDate) {
-//                     expiredBooks.push(
-//                         `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-//                     );
-//                 } else {
-//                     notExpiredBooks.push(
-//                         `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-//                     );
-//                 }
-//             } else if (record.books) {
-//                 notExpiredBooks.push(
-//                     `Book ID: ${record.book_id}, Title: ${record.books.title}`,
-//                 );
+//         // If transaction record exists, update it to mark as returned
+//         if (transaction) {
+//             const currentDate = new Date(getCurrentDate());
+//             const expiryDate = transaction.expiry_date
+//                 ? new Date(transaction.expiry_date)
+//                 : null;
+//             if (!expiryDate) {
+//                 return "Expiry date is not available";
 //             }
+//             // Check if the book is returned before the expiry date
+//             if (currentDate <= expiryDate) {
+//                 await prisma.transactions.update({
+//                     where: { transaction_id: transaction.transaction_id },
+//                     data: { transaction_type: "Returned" },
+//                 });
+//                 return "Book returned successfully";
+//             } else {
+//                 return "Book returned after the expiry date";
+//             }
+//         } else {
+//             return "No transaction found for the user and book";
 //         }
-//         return { expiredBooks, notExpiredBooks };
 //     } catch (error) {
-//         console.error("Error checking expired books for librarian:", error);
-//         throw new Error("Failed to check expired books");
+//         console.error("Error returning book:", error);
+//         throw new Error("Failed to return book");
 //     }
 // }
 async function checkExpiredBooksForLibrarian(librarianName) {
@@ -1078,4 +1077,55 @@ async function checkExpiredBooksForLibrarian(librarianName) {
     }
 }
 exports.checkExpiredBooksForLibrarian = checkExpiredBooksForLibrarian;
+async function getReservationsForUser(userId) {
+    try {
+        const userReservations = await prisma.reservations.findMany({
+            where: {
+                user_id: userId,
+            },
+            include: {
+                books: {
+                    select: {
+                        title: true,
+                        author: true,
+                        type: true,
+                    },
+                },
+            },
+        });
+        return userReservations;
+    }
+    catch (error) {
+        console.error("Error retrieving reservations for user:", error);
+        throw new Error("Failed to retrieve reservations for user");
+    }
+}
+exports.getReservationsForUser = getReservationsForUser;
+async function getTransactionsForUser(userId) {
+    try {
+        const userTransactions = await prisma.transactions.findMany({
+            where: {
+                user_id: userId,
+            },
+            include: {
+                books: {
+                    select: {
+                        title: true,
+                        author: true,
+                        isbn: true,
+                        type: true,
+                        total_copies: true,
+                        available_copies: true,
+                    },
+                },
+            },
+        });
+        return userTransactions;
+    }
+    catch (error) {
+        console.error("Error retrieving transactions for user:", error);
+        throw new Error("Failed to retrieve transactions for user");
+    }
+}
+exports.getTransactionsForUser = getTransactionsForUser;
 //# sourceMappingURL=bookService.js.map

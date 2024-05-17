@@ -11,7 +11,7 @@ import * as crypto from "crypto";
 
 import { findUserById } from "../prisma/services/userService";
 import { BookFilters, BookType } from "../interface/models.interface";
-import { borrowBook, deleteReservation, deleteTransaction, findBooksByCriteria, reserveBook } from "../prisma/services/bookService";
+import { borrowBook, deleteReservation, deleteTransaction, findBooksByCriteria, getReservationsForUser, getTransactionsForUser, reserveBook } from "../prisma/services/bookService";
 
 
 export const filterBooksForUser = async (
@@ -150,51 +150,158 @@ export const reserveBookForUser = async (req: express.Request, res: express.Resp
     }
 };
 
-export const deleteTransactionHandler = async (
+// export const deleteTransactionHandler = async (
+//     req: express.Request,
+//     res: express.Response,
+// ) => {
+//     try {
+//         const { transactionId } = req.query;
+//         const userId = req.cookies["userId"] || req.headers["id"];
+
+//         // Find the librarian user
+//         const user = await findUserById(parseInt(userId));
+//         if (!user) {
+//             return res
+//                 .status(401)
+//                 .json({ success: false, msg: "Who are you? 🤔" });
+//         }
+//         // Delete the transaction
+//         const message = await deleteTransaction(parseInt(transactionId as string),parseInt(userId));
+
+//         res.status(200).json({ success: true, msg: message });
+//     } catch (error) {
+//         console.error('Error deleting transaction:', error);
+//         res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
+//     }
+// };
+// export const deleteReservationHandler = async (
+//     req: express.Request,
+//     res: express.Response,
+// ) => {
+//     try {
+//         const { reservationId } = req.query;
+//         const userId = req.cookies["userId"] || req.headers["id"];
+
+//         // Find the librarian user
+//         const user = await findUserById(parseInt(userId));
+//         if (!user) {
+//             return res
+//                 .status(401)
+//                 .json({ success: false, msg: "Who are you? 🤔" });
+//         }
+//         // Delete the transaction
+//         const message = await deleteReservation(parseInt(reservationId as string),parseInt(userId));
+
+//         res.status(200).json({ success: true, msg: message });
+//     } catch (error) {
+//         console.error('Error deleting transaction:', error);
+//         res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
+//     }
+// };
+
+export const getRequestedReservedBooksForUser = async (
     req: express.Request,
     res: express.Response,
 ) => {
     try {
-        const { transactionId } = req.query;
-        const userId = req.cookies["userId"] || req.headers["id"];
+
+        const user_id = req.cookies["userId"] || req.headers["id"];
 
         // Find the librarian user
-        const user = await findUserById(parseInt(userId));
+        const user = await findUserById(parseInt(user_id));
         if (!user) {
             return res
                 .status(401)
                 .json({ success: false, msg: "Who are you? 🤔" });
         }
-        // Delete the transaction
-        const message = await deleteTransaction(parseInt(transactionId as string),parseInt(userId));
 
-        res.status(200).json({ success: true, msg: message });
+        // Check if the user is a librarian or administrator
+        if (
+            user.role !== "patron"
+        ) {
+            return res.status(401).json({
+                success: false,
+                msg: "You do not have permission to perform this action. 😡",
+            });
+        }
+
+    
+        const data = await getReservationsForUser(
+            parseInt(user_id)
+        );
+
+        if (!data || data.length === 0) {
+            return res.status(200).json({
+                success: true,
+                msg: "No reservations found",
+            });
+        } else {
+            return res.status(200).json({
+                success: true,
+                msg: "Success",
+                data: data,
+            });
+        }
     } catch (error) {
-        console.error('Error deleting transaction:', error);
-        res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        } else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "Unknown error" });
+        }
     }
 };
-export const deleteReservationHandler = async (
+export const getRequestedTransactionsBooksForUser = async (
     req: express.Request,
     res: express.Response,
 ) => {
     try {
-        const { reservationId } = req.query;
-        const userId = req.cookies["userId"] || req.headers["id"];
+
+        const user_id = req.cookies["userId"] || req.headers["id"];
 
         // Find the librarian user
-        const user = await findUserById(parseInt(userId));
+        const user = await findUserById(parseInt(user_id));
         if (!user) {
             return res
                 .status(401)
                 .json({ success: false, msg: "Who are you? 🤔" });
         }
-        // Delete the transaction
-        const message = await deleteReservation(parseInt(reservationId as string),parseInt(userId));
 
-        res.status(200).json({ success: true, msg: message });
+        // Check if the user is a librarian or administrator
+        if (
+            user.role !== "patron"
+        ) {
+            return res.status(401).json({
+                success: false,
+                msg: "You do not have permission to perform this action. 😡",
+            });
+        }
+
+    
+        const data = await getTransactionsForUser(
+            parseInt(user_id)
+        );
+
+        if (!data || data.length === 0) {
+            return res.status(200).json({
+                success: true,
+                msg: "No reservations found",
+            });
+        } else {
+            return res.status(200).json({
+                success: true,
+                msg: "Success",
+                data: data,
+            });
+        }
     } catch (error) {
-        console.error('Error deleting transaction:', error);
-        res.status(500).json({ success: false, msg: 'Failed to delete transaction' });
+        if (error instanceof Error) {
+            return res.status(500).json({ success: false, msg: error.message });
+        } else {
+            return res
+                .status(500)
+                .json({ success: false, msg: "Unknown error" });
+        }
     }
 };

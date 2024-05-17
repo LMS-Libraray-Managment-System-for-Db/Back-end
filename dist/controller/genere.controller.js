@@ -21,7 +21,13 @@ const getAllGenresApi = async (req, res) => {
             });
         }
         const genres = await (0, genereService_1.getAllGenres)();
-        return res.status(200).json({ success: true, msg: "genre sended successfully", data: genres });
+        return res
+            .status(200)
+            .json({
+            success: true,
+            msg: "genre sended successfully",
+            data: genres,
+        });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -54,7 +60,14 @@ const addGenresController = async (req, res) => {
             });
         }
         const newGenres = await (0, genereService_1.addGenres)(names);
-        return res.status(201).json({ success: true, msg: "genre updated successfully", genres: newGenres });
+        const genres = await (0, genereService_1.getAllGenres)();
+        return res
+            .status(201)
+            .json({
+            success: true,
+            msg: "genre updated successfully",
+            data: genres,
+        });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -88,7 +101,14 @@ const deleteGenreController = async (req, res) => {
             });
         }
         const deletedGenre = await (0, genereService_1.deleteGenre)(parseInt(genreId));
-        return res.status(200).json({ success: true, msg: "genre deleted successfully", deletedGenre });
+        const genres = await (0, genereService_1.getAllGenres)();
+        return res
+            .status(200)
+            .json({
+            success: true,
+            msg: "genre deleted successfully",
+            data: genres,
+        });
     }
     catch (error) {
         if (error instanceof Error) {

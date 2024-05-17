@@ -27,6 +27,7 @@ import {
     getAllUsersByLibrarian,
     toggleUserActiveByLibrarian,
 } from "../controller/librarian.controller";
+import { getRequestedReservedBooksForUser } from "../controller/userBook.controller";
 
 // let upload = multer();
 const userRouter: express.Router = express.Router();
@@ -46,6 +47,11 @@ userRouter.post(
             .escape()
             .withMessage("Name is required"),
         body("email").isEmail().escape().withMessage("email isnot valid"),
+        body("account_type")
+            .not()
+            .isEmpty()
+            .escape()
+            .withMessage("account_type is required"),
         body("password")
             .isLength({ min: 8, max: 20 })
             .escape()
@@ -114,7 +120,7 @@ userRouter.put(
     resetTokenVerifier,
     updatePassword,
 );
-userRouter.post("/refresh-token", jwtTokenVerifier, refreshToken);
+userRouter.post("/refresh-token", refreshToken);
 userRouter.post("/admin/addUser", jwtTokenVerifier, addUser);
 userRouter.get("/admin/allUsers", jwtTokenVerifier, getAllUsersByAdmin);
 userRouter.post("/admin/filter", jwtTokenVerifier, filterUsers);
@@ -132,10 +138,6 @@ userRouter.post(
     jwtTokenVerifier,
     getUsersWithLibraryName,
 );
-userRouter.post(
-    "/addUserLibraraies",
-    jwtTokenVerifier,
-    addUserToUserLibraries,
-);
+userRouter.post("/addUserLibraraies", jwtTokenVerifier, addUserToUserLibraries);
 
 export default userRouter;

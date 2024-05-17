@@ -26,6 +26,11 @@ userRouter.post("/register", [
         .escape()
         .withMessage("Name is required"),
     (0, express_validator_1.body)("email").isEmail().escape().withMessage("email isnot valid"),
+    (0, express_validator_1.body)("account_type")
+        .not()
+        .isEmpty()
+        .escape()
+        .withMessage("account_type is required"),
     (0, express_validator_1.body)("password")
         .isLength({ min: 8, max: 20 })
         .escape()
@@ -60,7 +65,7 @@ userRouter.put("/reset-password", [
         .withMessage("code is deficient"),
     (0, express_validator_1.body)("email").isEmail().escape().withMessage("email is not valid"),
 ], resetTokenVerifier_1.default, user_controller_1.updatePassword);
-userRouter.post("/refresh-token", jwtTokenVerifier_1.default, user_controller_1.refreshToken);
+userRouter.post("/refresh-token", user_controller_1.refreshToken);
 userRouter.post("/admin/addUser", jwtTokenVerifier_1.default, admin_controller_1.addUser);
 userRouter.get("/admin/allUsers", jwtTokenVerifier_1.default, admin_controller_1.getAllUsersByAdmin);
 userRouter.post("/admin/filter", jwtTokenVerifier_1.default, admin_controller_1.filterUsers);

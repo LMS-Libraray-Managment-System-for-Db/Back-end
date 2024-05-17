@@ -60,7 +60,7 @@ const toggleUserActiveByLibrarian = async (req, res) => {
         // Toggle the user's active status in the User_Libraries table
         const isActive = !userLibrary.is_active;
         await (0, user_WithLibrarianService_1.updateUserLibraryActiveStatus)(user.user_id, librarianLibraryName, isActive);
-        return res.status(200).json({ success: true, isActive });
+        return res.status(200).json({ success: true, isActive, id: user.user_id });
     }
     catch (error) {
         if (error instanceof Error) {
@@ -90,8 +90,15 @@ const getAllUsersByLibrarian = async (req, res) => {
                 .json({ success: false, msg: "You have no permission 🤬😡" });
         }
         const users = await (0, userService_1.getAllUsersForLibrarian)(String(user.library_name), page);
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                msg: "No more data💔💔(❁´◡`❁)",
+                page: parseInt(page)
+            });
+        }
         if (users) {
-            res.status(200).json({ success: true, data: users });
+            res.status(200).json({ success: true, data: users, page: parseInt(page) });
         }
         else {
             res.status(401).json({ success: false, msg: "No user found" });

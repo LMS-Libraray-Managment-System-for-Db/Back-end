@@ -195,7 +195,7 @@ async function getAllUsers(options) {
             take: take,
         });
         if (users.length === 0) {
-            return []; // Return an empty array if no users found for the given page
+            return [];
         }
         return users;
     }
@@ -211,7 +211,7 @@ async function getAllUsers(options) {
 exports.getAllUsers = getAllUsers;
 async function getAllUsersForLibrarian(librarianName, options) {
     try {
-        let page = options;
+        let page = options || 1;
         const take = 10;
         let skip = (page - 1) * take;
         const users = await prisma.users.findMany({
@@ -234,6 +234,9 @@ async function getAllUsersForLibrarian(librarianName, options) {
                 }
             },
         });
+        if (users.length === 0) {
+            return [];
+        }
         return users;
     }
     catch (error) {
@@ -246,11 +249,19 @@ async function getAllUsersForLibrarian(librarianName, options) {
     }
 }
 exports.getAllUsersForLibrarian = getAllUsersForLibrarian;
-async function getUsersByFilters(filters) {
+async function getUsersByFilters(filters, options) {
     try {
+        let page = options || 1;
+        const take = 10;
+        let skip = (page - 1) * take;
         const users = await prisma.users.findMany({
             where: filters,
+            skip: skip,
+            take: take,
         });
+        if (users.length === 0) {
+            return [];
+        }
         return users;
     }
     catch (error) {

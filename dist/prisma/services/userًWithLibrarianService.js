@@ -47,16 +47,28 @@ async function addUserLibrariesForPatron(userId) {
         const libraries = await (0, userService_1.getAllLibrariesWithLibrarians)();
         // Iterate through each library and add user libraries for the patron user
         for (const library of libraries) {
-            await prisma.user_libraries.create({
-                data: {
-                    user_id: userId,
-                    library_name: String(library),
-                    is_active: true
-                }
+            // Check if the user library already exists
+            const existingUserLibrary = await prisma.user_libraries.findUnique({
+                where: {
+                    user_id_library_name: {
+                        user_id: userId,
+                        library_name: String(library),
+                    },
+                },
             });
+            // If the user library does not exist, create it
+            if (!existingUserLibrary) {
+                await prisma.user_libraries.create({
+                    data: {
+                        user_id: userId,
+                        library_name: String(library),
+                        is_active: true,
+                    },
+                });
+            }
         }
         console.log(`User libraries for patron user ${userId} added successfully`);
-        return `User libraries for  user added successfully`;
+        return `User libraries for user added successfully`;
     }
     catch (error) {
         if (error instanceof Error) {
@@ -68,5 +80,4 @@ async function addUserLibrariesForPatron(userId) {
     }
 }
 exports.addUserLibrariesForPatron = addUserLibrariesForPatron;
-;
 //# sourceMappingURL=user%D9%8BWithLibrarianService.js.map
